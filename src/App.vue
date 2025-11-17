@@ -56,16 +56,6 @@
                 Shop
               </router-link>
             </li>
-            <li class="nav-item">
-              <router-link
-                to="/item"
-                class="nav-link"
-                @click="showNav = false"
-                active-class="active"
-              >
-                Item
-              </router-link>
-            </li>
           </ul>
         </div>
       </div>

@@ -14,12 +14,25 @@ const routes = [
   { path: "/news", name: "News", component: News },
   { path: "/about", name: "About", component: About },
   { path: "/shop", name: "Shop", component: Shop },
-  { path: "/item", name: "Item", component: Item },
+
+  {
+    path: "/product/:id",
+    name: "ProductDetail",
+    component: Item,
+    props: true,
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0 };
+    }
+  },
 });
 
 const app = createApp(App);

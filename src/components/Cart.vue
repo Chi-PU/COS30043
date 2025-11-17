@@ -1,8 +1,6 @@
 <template>
   <div class="cart-container">
-    <!-- Cart Header -->
-    <h2>SHOPPING CART</h2>
-
+    <h2>Shopping Cart</h2>
     <!-- Select All -->
     <div class="select-all-row">
       <input
@@ -11,17 +9,19 @@
         v-model="selectAll"
         @change="toggleSelectAll"
       />
-      <label for="selectAll">Select All ({{ totalProducts }} products)</label>
+      <label for="selectAll"
+        >Select All ({{ totalProductCount }} products)</label
+      >
       <div class="table-headers">
-        <span class="price-header">Unit Price</span>
-        <span class="qty-header">Quantity</span>
-        <span class="total-header">Total Price</span>
-        <span class="delete-header"></span>
+        <span>Unit Price</span>
+        <span>Quantity</span>
+        <span>Total</span>
+        <span class="icon-delete" title="Delete"></span>
       </div>
     </div>
 
     <!-- Shop Sections -->
-    <div v-for="(shop, sIndex) in shops" :key="shop.id" class="shop-section">
+    <div class="shop-section" v-for="(shop, sIndex) in shops" :key="shop.id">
       <div class="shop-header">
         <input
           type="checkbox"
@@ -29,15 +29,14 @@
           v-model="shop.selected"
           @change="toggleShopSelection(sIndex)"
         />
-        <label :for="'shop-' + shop.id">
-          <span class="shop-icon">🏬</span> {{ shop.name }}
-          <span v-if="shop.subtext" class="shop-subtext"> &gt; </span>
-        </label>
+        <label :for="'shop-' + shop.id"
+          >🏬 {{ shop.name }} <span>›</span></label
+        >
       </div>
 
-      <!-- Promotion Info -->
-      <div v-if="shop.promo" class="shop-promo">
-        {{ shop.promo.text }}
+      <!-- Shop Promo -->
+      <div v-if="shop.promoText" class="shop-promo">
+        {{ shop.promoText }}
         <a href="#" class="choose-products">Choose products</a>
       </div>
 
@@ -47,38 +46,32 @@
         :key="product.id"
         :class="['product-row', { disabled: product.outOfStock }]"
       >
-        <div class="product-select">
-          <input
-            type="checkbox"
-            :id="'product-' + product.id"
-            v-model="product.selected"
-            :disabled="product.outOfStock"
-            @change="updateSelectAllStatus"
-          />
-          <label :for="'product-' + product.id" class="product-info">
-            <img :src="product.image" alt="" class="product-image" />
-            <div class="product-text">
-              <p class="product-name">{{ product.name }}</p>
-              <p class="delivery">
-                <span class="icon">🚚</span> Delivery tomorrow
-              </p>
-              <p class="bookcare" v-if="product.bookCare">
-                Can be wrapped with Bookcare
-              </p>
-              <p class="color-storage" v-if="product.colorStorage">
-                {{ product.colorStorage }}
-              </p>
-            </div>
-          </label>
-        </div>
-
-        <!-- Price -->
-        <div class="price-info">
+        <input
+          type="checkbox"
+          :id="'product-' + product.id"
+          v-model="product.selected"
+          :disabled="product.outOfStock"
+          @change="updateSelectAllStatus"
+        />
+        <label :for="'product-' + product.id" class="product-info">
+          <img class="product-image" :src="product.image" alt="product" />
+          <div class="product-text">
+            <p class="product-name">{{ product.name }}</p>
+            <p class="delivery-info"><span>🚚</span> Delivery tomorrow</p>
+            <p v-if="product.bookCare" class="bookcare">
+              Can be wrapped with Bookcare
+            </p>
+            <p v-if="product.colorStorage" class="color-storage">
+              {{ product.colorStorage }}
+            </p>
+          </div>
+        </label>
+        <div class="unit-price">
           <template v-if="!product.outOfStock">
-            <span class="discount-price">{{
+            <span class="price-discounted">{{
               formatPrice(product.discountPrice)
             }}</span>
-            <span class="original-price">{{
+            <span class="price-original">{{
               formatPrice(product.originalPrice)
             }}</span>
             <span class="discount-percent"
@@ -86,12 +79,12 @@
             >
           </template>
           <template v-else>
-            <span class="out-of-stock">Out of Stock</span>
-            <span class="price-note">Price not applicable for promotion</span>
+            <span class="out-of-stock">Out of stock</span>
+            <span class="no-promo-price"
+              >Price not applicable for promotion</span
+            >
           </template>
         </div>
-
-        <!-- Quantity -->
         <div class="quantity-control" v-if="!product.outOfStock">
           <button
             @click="decreaseQuantity(sIndex, pIndex)"
@@ -102,97 +95,100 @@
           <input type="number" v-model.number="product.quantity" min="1" />
           <button @click="increaseQuantity(sIndex, pIndex)">+</button>
         </div>
-
-        <!-- Total Price -->
-        <div class="item-total-price" v-if="!product.outOfStock">
+        <div class="total-price" v-if="!product.outOfStock">
           {{ formatPrice(product.discountPrice * product.quantity) }}
         </div>
-
-        <!-- Delete -->
-        <div class="delete-button" @click="removeProduct(sIndex, pIndex)">
+        <button
+          class="delete-product"
+          @click="removeProduct(sIndex, pIndex)"
+          title="Delete product"
+        >
           🗑️
-        </div>
+        </button>
       </div>
     </div>
 
-    <!-- Add Shop Promo Codes -->
-    <div class="shop-promo-link">
-      <a href="#">Add Shop Promo Codes</a>
+    <!-- Add shop promo -->
+    <div class="add-shop-promo">
+      <a href="#">Add shop promo codes</a>
     </div>
 
-    <!-- Free Shipping Info -->
-    <div class="free-shipping-info">
-      🚚 Free shipping 10k for orders from 45k, Free shipping 25k for orders
-      from 100k
-      <span class="info-icon">i</span>
+    <!-- Shipping promotion info -->
+    <div class="shipping-promo-info">
+      <span class="icon">🚚</span> Free shipping 10k on orders from 45k, Free
+      shipping 25k on orders from 100k
+      <span class="info-icon">ⓘ</span>
     </div>
 
-    <!-- Delivery Address -->
-    <div class="delivery-info-box">
+    <!-- Delivery info -->
+    <section class="delivery-info">
       <div class="delivery-header">
         <span>Deliver to</span>
-        <a href="#" class="change-link">Change</a>
+        <button class="change-btn" @click.prevent="changeDelivery">
+          Change
+        </button>
       </div>
       <div class="receiver-info">
         <strong>{{ delivery.name }}</strong> | {{ delivery.phone }}
-        <div class="address-line">
+        <div class="address">
           <span class="home-label">Home</span> {{ delivery.address }}
         </div>
       </div>
-      <div class="delivery-note">
+      <p class="delivery-note">
         Note: Use previous delivery address before restocking
-      </div>
-    </div>
+      </p>
+    </section>
 
-    <!-- Tiki Promotions -->
-    <div class="tiki-promo-box">
-      <div class="tiki-promo-header">
-        <span>Tiki Promotions</span>
-        <span class="can-select">Can select up to 2</span>
-      </div>
+    <!-- Promotions -->
+    <section class="promotions">
+      <header>
+        <h3>Tiki Promotions</h3>
+        <small>Can select up to 2</small>
+      </header>
       <div
-        v-for="(promo, index) in promos"
+        class="promo-item"
+        v-for="(promo, i) in promos"
         :key="promo.id"
-        :class="['promo-item', { selected: promo.selected }]"
+        :class="{ selected: promo.selected }"
       >
         <div class="promo-icon">{{ promo.icon }}</div>
         <div class="promo-desc">{{ promo.description }}</div>
         <button
           v-if="promo.selected"
-          @click="removePromo(index)"
-          class="remove-promo-btn"
+          @click="removePromo(i)"
+          class="btn-remove"
         >
           Remove
         </button>
-        <button v-else @click="selectPromo(index)" class="select-promo-btn">
+        <button v-else @click="selectPromo(i)" class="btn-select">
           Select
         </button>
       </div>
-      <a href="#" class="more-promos-link">
-        Shop more to get free shipping 100k on...
-      </a>
-    </div>
+      <a href="#" class="more-promos"
+        >Shop more to get free shipping 100k on...</a
+      >
+    </section>
 
     <!-- Price Summary -->
-    <div class="price-summary">
-      <div class="summary-row">
+    <section class="price-summary">
+      <div class="price-row">
         <span>Subtotal</span>
         <span>{{ formatPrice(subtotal) }}</span>
       </div>
-      <div class="summary-row discount-row">
-        <span>Direct Discount</span>
-        <span class="discount-amount">-{{ formatPrice(discount) }}</span>
+      <div class="price-row discount">
+        <span>Direct discount</span>
+        <span>-{{ formatPrice(discount) }}</span>
       </div>
-      <div class="summary-row total-row">
+      <div class="price-row total">
         <strong>Total Payment</strong>
-        <strong class="total-payment">{{
-          formatPrice(subtotal - discount)
-        }}</strong>
+        <strong class="total-payment">{{ formatPrice(totalPayment) }}</strong>
       </div>
-      <div class="savings-note">You save {{ formatPrice(discount) }}</div>
+      <div class="savings">Save {{ formatPrice(discount) }}</div>
       <div class="vat-note">(Including VAT if applicable)</div>
-      <button class="checkout-btn">Checkout ({{ totalSelected }})</button>
-    </div>
+      <button class="checkout-btn" @click="checkout">
+        Purchase ({{ selectedCount }})
+      </button>
+    </section>
   </div>
 </template>
 
@@ -201,15 +197,13 @@ export default {
   name: "ShoppingCart",
   data() {
     return {
-      selectAll: false,
+      selectAll: true,
       shops: [
         {
           id: 1,
           name: "Tiki Trading",
           selected: true,
-          promo: {
-            text: "Buy 2 get 5% off",
-          },
+          promoText: "Buy 2 more, get 5% off",
           products: [
             {
               id: 101,
@@ -259,12 +253,12 @@ export default {
           id: 2,
           name: "Laptop Minh Ha",
           selected: false,
-          promo: null,
+          promoText: "",
           products: [
             {
               id: 201,
-              name: "Laptop model example product",
-              image: "https://salt.tikicdn.com/cache/w100/ts/product/xxx.jpg",
+              name: "Example Laptop Product",
+              image: "",
               selected: false,
               originalPrice: 6500000,
               discountPrice: 6500000,
@@ -291,50 +285,48 @@ export default {
         address:
           "54/19 Street 10, Cat Lai Ward, Thu Duc City, Ho Chi Minh City",
       },
+      discount: 83000,
     };
   },
   computed: {
-    totalProducts() {
-      return this.shops.reduce((acc, shop) => acc + shop.products.length, 0);
+    totalProductCount() {
+      return this.shops.reduce(
+        (total, shop) =>
+          total + shop.products.filter((product) => !product.outOfStock).length,
+        0
+      );
     },
     subtotal() {
-      return this.shops.reduce((acc, shop) => {
+      return this.shops.reduce((total, shop) => {
         return (
-          acc +
-          shop.products.reduce((sum, p) => {
-            return p.selected && !p.outOfStock
-              ? sum + p.discountPrice * p.quantity
+          total +
+          shop.products.reduce((sum, product) => {
+            return product.selected && !product.outOfStock
+              ? sum + product.discountPrice * product.quantity
               : sum;
           }, 0)
         );
       }, 0);
     },
-    discount() {
-      // hardcoded discount for now - adjust as needed
-      return 83000;
+    totalPayment() {
+      return this.subtotal - this.discount;
     },
-    totalSelected() {
-      return this.shops.reduce((acc, shop) => {
-        return (
-          acc + shop.products.filter((p) => p.selected && !p.outOfStock).length
-        );
-      }, 0);
-    },
-  },
-  watch: {
-    shops: {
-      handler() {
-        this.updateSelectAllStatus();
-      },
-      deep: true,
-      immediate: true,
+    selectedCount() {
+      let count = 0;
+      this.shops.forEach((shop) => {
+        count += shop.products.filter(
+          (product) => product.selected && !product.outOfStock
+        ).length;
+      });
+      return count;
     },
   },
   methods: {
-    formatPrice(val) {
-      return val.toLocaleString("en-US", {
+    formatPrice(value) {
+      return Number(value).toLocaleString("vi-VN", {
         style: "currency",
         currency: "VND",
+        minimumFractionDigits: 0,
       });
     },
     toggleSelectAll() {
@@ -353,248 +345,252 @@ export default {
       this.updateSelectAllStatus();
     },
     updateSelectAllStatus() {
-      const allSelected = this.shops.every((shop) => {
-        return (
+      this.selectAll = this.shops.every(
+        (shop) =>
           shop.selected &&
           shop.products.every(
             (product) => product.selected || product.outOfStock
           )
-        );
-      });
-      this.selectAll = allSelected;
+      );
     },
-    decreaseQuantity(shopIndex, pIndex) {
-      const product = this.shops[shopIndex].products[pIndex];
-      if (product.quantity > 1) {
-        product.quantity--;
-      }
+    decreaseQuantity(shopIndex, productIndex) {
+      const product = this.shops[shopIndex].products[productIndex];
+      if (product.quantity > 1) product.quantity--;
     },
-    increaseQuantity(shopIndex, pIndex) {
-      const product = this.shops[shopIndex].products[pIndex];
+    increaseQuantity(shopIndex, productIndex) {
+      const product = this.shops[shopIndex].products[productIndex];
       product.quantity++;
     },
-    removeProduct(shopIndex, pIndex) {
-      this.shops[shopIndex].products.splice(pIndex, 1);
-      if (this.shops[shopIndex].products.length === 0) {
+    removeProduct(shopIndex, productIndex) {
+      this.shops[shopIndex].products.splice(productIndex, 1);
+      if (!this.shops[shopIndex].products.length) {
         this.shops.splice(shopIndex, 1);
       }
       this.updateSelectAllStatus();
     },
-    selectPromo(index) {
-      if (this.promoSelectedCount < 2) {
-        this.promos[index].selected = true;
-      }
-    },
     removePromo(index) {
       this.promos[index].selected = false;
     },
-  },
-  computed: {
-    promoSelectedCount() {
-      return this.promos.filter((p) => p.selected).length;
+    selectPromo(index) {
+      const selectedCount = this.promos.filter((p) => p.selected).length;
+      if (selectedCount >= 2) return;
+      this.promos[index].selected = true;
     },
+    changeDelivery() {
+      alert("Change delivery info clicked");
+    },
+    checkout() {
+      alert("Checkout clicked with " + this.selectedCount + " products");
+    },
+  },
+  mounted() {
+    this.updateSelectAllStatus();
   },
 };
 </script>
 
 <style scoped>
 .cart-container {
-  max-width: 900px;
-  margin: 0 auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  color: #333;
-  background-color: white;
-  padding: 1rem;
+  max-width: 960px;
+  margin: 24px auto;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
 }
 
 h2 {
-  margin-bottom: 1rem;
-  font-weight: 600;
-  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
 }
 
 .select-all-row {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
-  position: relative;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
 .select-all-row input[type="checkbox"] {
-  margin-right: 0.5rem;
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.select-all-row label {
+  cursor: pointer;
+}
+
+.table-headers {
+  flex-grow: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 140px;
+  font-size: 13px;
+  color: #787878;
+  font-weight: 600;
+  margin-left: 20px;
+}
+
+.icon-delete {
   width: 18px;
   height: 18px;
 }
 
-.select-all-row label {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.table-headers {
-  display: flex;
-  margin-left: auto;
-  gap: 4rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #757575;
-  width: 420px;
-  justify-content: flex-end;
-}
-
-.price-header,
-.qty-header,
-.total-header,
-.delete-header {
-  width: 70px;
-  text-align: right;
-}
-
 .shop-section {
-  background: #fdf7ef;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  border-radius: 6px;
+  border: 1px solid #e6e6e6;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
 }
 
 .shop-header {
   display: flex;
   align-items: center;
-  font-size: 1.1rem;
+  font-size: 15px;
+  color: #222;
   font-weight: 600;
-  margin-bottom: 0.3rem;
+  margin-bottom: 6px;
+  user-select: none;
 }
 
 .shop-header input[type="checkbox"] {
-  margin-right: 0.5rem;
+  margin-right: 10px;
   width: 18px;
   height: 18px;
+  cursor: pointer;
 }
 
-.shop-icon {
-  margin-right: 0.3rem;
+.shop-header span {
+  margin-left: 6px;
+  font-weight: 400;
+  color: #999;
+  cursor: pointer;
 }
 
 .shop-promo {
-  background-color: #ffdcb1;
-  padding: 0.3rem 0.6rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.9rem;
+  background-color: #ffebd9;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #4e4e4e;
+  border-radius: 6px 6px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .choose-products {
-  color: #007aff;
-  text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
+  color: #0066c0;
+  text-decoration: none;
+}
+
+.choose-products:hover {
+  text-decoration: underline;
 }
 
 .product-row {
-  background: white;
   display: grid;
-  grid-template-columns: 3.5fr 1fr 1fr 1fr 0.5fr;
-  gap: 0.5rem;
+  grid-template-columns: 3fr 1fr 1fr 1fr 0.4fr;
   align-items: center;
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.9rem;
+  gap: 8px;
+  border-top: 1px solid #e6e6e6;
+  padding: 12px 0;
 }
 
 .product-row.disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   pointer-events: none;
 }
 
-.product-select {
-  display: flex;
-  align-items: center;
-}
-
-.product-select input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin-right: 0.5rem;
+.product-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .product-info {
   display: flex;
-  align-items: center;
+  gap: 12px;
   cursor: pointer;
+  align-items: center;
+  user-select: none;
 }
 
 .product-image {
   width: 60px;
-  height: 60px;
+  height: 80px;
   object-fit: contain;
-  margin-right: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .product-text {
   display: flex;
   flex-direction: column;
+  font-size: 12px;
+  color: #222;
 }
 
 .product-name {
   font-weight: 600;
-  margin: 0;
-  margin-bottom: 3px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.delivery {
+.delivery-info {
   color: #555;
-  font-size: 0.85rem;
   display: flex;
+  gap: 6px;
   align-items: center;
-  gap: 0.3rem;
 }
 
-.bookcare {
-  font-size: 0.8rem;
-  color: #888;
-}
-
+.bookcare,
 .color-storage {
-  font-size: 0.8rem;
+  font-size: 11px;
   color: #888;
-  margin-top: 4px;
+  font-style: italic;
+  margin-top: 2px;
 }
 
-.price-info {
+.unit-price {
+  font-size: 13px;
   text-align: right;
-  font-size: 0.9rem;
-  color: #555;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.discount-price {
-  color: #ff3b3b;
-  font-weight: 600;
-  margin-right: 0.3rem;
+.price-discounted {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 14px;
 }
 
-.original-price {
+.price-original {
   text-decoration: line-through;
-  color: #a0a0a0;
+  color: #999;
+  font-size: 12px;
 }
 
 .discount-percent {
-  color: green;
+  color: #16a34a;
   font-weight: 600;
-  font-size: 0.8rem;
-  display: block;
+  font-size: 12px;
 }
 
 .out-of-stock {
-  color: #f47777;
+  color: #fb923c;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 13px;
 }
 
-.price-note {
-  font-size: 0.8rem;
+.no-promo-price {
+  font-size: 12px;
   color: #bbb;
 }
 
@@ -602,168 +598,188 @@ h2 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.3rem;
+  gap: 6px;
 }
 
 .quantity-control button {
-  background-color: white;
-  border: 1px solid #ccc;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  font-weight: 700;
   font-size: 18px;
-  text-align: center;
   cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
   user-select: none;
 }
 
 .quantity-control button:disabled {
   color: #ccc;
+  border-color: #eee;
   cursor: default;
 }
 
 .quantity-control input {
-  width: 40px;
-  text-align: center;
-  border: 1px solid #ccc;
+  width: 48px;
   height: 28px;
-  font-size: 0.9rem;
-  border-radius: 3px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
 }
 
-.item-total-price {
-  color: #ff3b3b;
-  font-weight: 600;
+.total-price {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 14px;
   text-align: right;
 }
 
-.delete-button {
-  text-align: center;
-  font-size: 1.2rem;
+.delete-product {
+  background: none;
+  border: none;
+  font-size: 18px;
   cursor: pointer;
   color: #a00;
   user-select: none;
 }
 
-.delete-button:hover {
-  color: #ff3b3b;
+.delete-product:hover {
+  color: #ef4444;
 }
 
-.shop-promo-link,
-.free-shipping-info {
-  margin: 1rem 0;
-  font-size: 0.9rem;
+.add-shop-promo {
+  margin: 10px 0;
+}
+
+.add-shop-promo a {
+  color: #0066c0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.add-shop-promo a:hover {
+  text-decoration: underline;
+}
+
+.shipping-promo-info {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
   color: #555;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.shipping-promo-info .icon {
+  font-size: 18px;
+}
+
+.shipping-promo-info .info-icon {
+  font-size: 14px;
+  background: #ccc;
+  color: #444;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
   cursor: pointer;
 }
 
-.free-shipping-info {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.info-icon {
-  font-size: 0.95rem;
-  border: 1px solid #ccc;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  text-align: center;
-  line-height: 14px;
-  color: #555;
-  user-select: none;
-}
-
-.delivery-info-box {
-  background-color: #fff8dc;
-  border-radius: 6px;
-  padding: 0.8rem;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+.delivery-info {
+  border: 1px solid #f0db95;
+  background: #fff3cd;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #222;
+  margin-bottom: 14px;
 }
 
 .delivery-header {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-}
-
-.change-link {
-  text-decoration: none;
-  color: #007aff;
-  font-weight: 600;
-}
-
-.receiver-info {
-  margin-bottom: 0.3rem;
-}
-
-.address-line {
-  font-size: 0.85rem;
-  margin-top: 2px;
-  display: flex;
   align-items: center;
-  gap: 4px;
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 
-.home-label {
-  background-color: #b8e994;
-  border-radius: 8px;
-  padding: 2px 6px;
-  font-size: 0.75rem;
-  color: #2a7f62;
+.change-btn {
+  background: none;
+  border: none;
+  color: #0066c0;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.receiver-info strong {
   font-weight: 700;
 }
 
+.address {
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #444;
+}
+
+.home-label {
+  background-color: #9be6a8;
+  color: #216e25;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
 .delivery-note {
-  background-color: #ffeaaa;
-  color: #8a6d00;
-  padding: 0.4rem;
+  background-color: #ffeeba;
+  padding: 6px 12px;
+  margin-top: 10px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  color: #856404;
   font-weight: 600;
+  font-size: 12px;
 }
 
-.tiki-promo-box {
-  margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  padding: 0.8rem;
-  border-radius: 6px;
+.promotions {
+  margin-bottom: 12px;
 }
 
-.tiki-promo-header {
+.promotions header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  font-size: 1rem;
+  align-items: center;
+  font-weight: 700;
 }
 
-.can-select {
+.promotions small {
   font-weight: 400;
+  font-size: 12px;
   color: #666;
-  font-size: 0.85rem;
 }
 
 .promo-item {
   display: flex;
   align-items: center;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  padding: 0.4rem 0.8rem;
-  margin-bottom: 0.5rem;
-  justify-content: space-between;
-  gap: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  gap: 12px;
 }
 
 .promo-item.selected {
-  border-color: #007aff;
-  background-color: #e8f0ff;
+  border-color: #0066c0;
+  background: #bbd7ff;
 }
 
 .promo-icon {
-  font-size: 1.5rem;
+  font-size: 28px;
 }
 
 .promo-desc {
@@ -771,82 +787,95 @@ h2 {
   font-weight: 600;
 }
 
-.remove-promo-btn,
-.select-promo-btn {
-  background-color: #007aff;
+.btn-remove,
+.btn-select {
+  background: #0066c0;
   border: none;
+  padding: 6px 14px;
   color: white;
-  font-size: 0.85rem;
-  padding: 4px 10px;
-  border-radius: 4px;
+  font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-.remove-promo-btn {
-  background-color: #ff4d4d;
+.btn-remove {
+  background: #ef4444;
 }
 
-.more-promos-link {
-  color: #007aff;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
+.btn-remove:hover {
+  background: #ca2727;
+}
+
+.btn-select:hover {
+  background: #004a99;
+}
+
+.more-promos {
   display: block;
-  margin-top: 0.3rem;
+  margin-top: 6px;
+  color: #0066c0;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.more-promos:hover {
+  text-decoration: underline;
 }
 
 .price-summary {
+  margin-top: 20px;
   border-top: 1px solid #ddd;
-  padding: 1rem 0;
-  font-size: 1rem;
+  padding-top: 20px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.summary-row {
+.price-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.3rem;
+  margin-bottom: 8px;
 }
 
-.discount-row {
-  color: green;
+.price-row.discount {
+  color: #099a3e;
 }
 
-.discount-amount {
-  color: green;
+.price-row.total {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ef4444;
 }
 
-.total-row {
-  font-weight: 700;
-  font-size: 1.2rem;
-  margin-top: 0.5rem;
-}
-
-.savings-note {
-  color: green;
+.savings {
+  font-size: 14px;
   font-weight: 600;
-  margin-top: 0.3rem;
+  color: #099a3e;
+  margin-top: 6px;
 }
 
 .vat-note {
+  font-size: 12px;
   color: #666;
-  font-size: 0.8rem;
-  margin-top: 0.1rem;
+  margin-top: 2px;
 }
 
 .checkout-btn {
-  margin-top: 0.8rem;
-  width: 100%;
-  padding: 0.8rem 0;
-  background-color: #ff3b3b;
+  margin-top: 10px;
+  background-color: #ef4444;
   color: white;
-  font-weight: 700;
-  font-size: 1.1rem;
+  width: 100%;
   border: none;
-  border-radius: 6px;
+  font-weight: 700;
+  font-size: 18px;
+  padding: 12px 0;
+  border-radius: 10px;
   cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
 }
 
 .checkout-btn:hover {
-  background-color: #d83232;
+  background-color: #c93b3b;
 }
 </style>

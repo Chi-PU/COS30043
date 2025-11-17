@@ -234,10 +234,13 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import ShopHeader from "./ShopHeader.vue";
 import AuthPopup from "./AuthPopup.vue";
 import Hero from "./Hero.vue";
 import { productsAPI, cartAPI, authAPI } from "../services/api";
+
+const router = useRouter();
 
 // State
 const loading = ref(true);
@@ -343,12 +346,10 @@ const viewCart = () => {
 };
 
 const viewProductDetail = (product) => {
-  alert(
-    `View product details: ${product.name}\nPrice: $${formatPrice(
-      getDiscountedPrice(product)
-    )}\nRating: ${getAverageRating(product).toFixed(1)}/5`
-  );
+  // Navigate to product detail page
+  router.push(`/product/${product.id}`);
 };
+
 
 const handleLoginSuccess = (userData) => {
   console.log("✅ Login successful, user data:", userData);
@@ -371,9 +372,6 @@ const handleLogout = async () => {
 
     console.log("✅ User state cleared. User is now:", user.value);
     alert("You have been logged out successfully!");
-
-    // Optionally reload the page to ensure clean state
-    // window.location.reload();
   } catch (err) {
     console.error("❌ Logout error:", err);
     alert("Error logging out. Please try again.");
@@ -393,6 +391,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* [All the existing styles remain the same] */
 .shop-homepage {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background: #fff;
@@ -400,7 +399,6 @@ onMounted(() => {
   user-select: none;
 }
 
-/* Loading and Error */
 .loading-message,
 .error-message {
   text-align: center;
@@ -423,7 +421,6 @@ onMounted(() => {
   background: #0066cc;
 }
 
-/* Top Deal Product Section */
 .top-deal-section {
   background-color: #fff;
   padding: 12px 20px 20px 20px;
@@ -565,7 +562,7 @@ onMounted(() => {
   overflow: hidden;
   color: #212529;
   margin: 0 0 8px 0;
-  cursor: default;
+  cursor: pointer;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -660,7 +657,6 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* Content Wrapper - Second Layer */
 .content-wrapper {
   display: flex;
   padding: 25px 20px 40px 20px;
@@ -669,7 +665,6 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* Sidebar categories */
 .sidebar {
   min-width: 220px;
   border-radius: 4px;
@@ -713,7 +708,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Main Content */
 .main-content {
   flex: 1;
   display: flex;
@@ -721,7 +715,6 @@ onMounted(() => {
   gap: 18px;
 }
 
-/* Floating Right Buttons */
 .floating-buttons {
   position: fixed;
   bottom: 60px;
@@ -756,7 +749,6 @@ onMounted(() => {
   box-shadow: 0 6px 12px rgba(0, 125, 255, 0.6);
 }
 
-/* Responsive */
 @media (max-width: 970px) {
   .content-wrapper {
     flex-direction: column;

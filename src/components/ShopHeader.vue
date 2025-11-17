@@ -16,10 +16,14 @@
     </div>
 
     <div class="header-right">
-      <a href="#" class="header-link home-link">
+      <button
+        @click="goHomepage"
+        class="header-link account-link"
+        title="Account"
+      >
         <Home :size="18" />
         <span>Home</span>
-      </a>
+      </button>
 
       <!-- Account Button with Dropdown -->
       <div class="account-wrapper">
@@ -58,6 +62,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import { Home, User, ShoppingCart, ChevronDown, LogOut } from "lucide-vue-next";
+import { useRouter } from "vue-router";
 
 // Props
 const props = defineProps({
@@ -71,6 +76,11 @@ const props = defineProps({
   },
 });
 
+//homepage
+const router = useRouter();
+const goHomepage = () => {
+  router.push({ name: "Shop" });
+};
 // Emits
 const emit = defineEmits(["show-auth", "view-cart", "logout"]);
 
@@ -86,14 +96,10 @@ const toggleDropdown = () => {
   }
 };
 
-const handleLogout = async () => {
-  try {
-    await authAPI.logout(); // call backend to clear cookie-session
-    user.value = null; // remove user
-    cartCount.value = 0; // reset cart
-  } catch (err) {
-    console.error("Logout failed", err);
-  }
+const handleLogout = () => {
+  console.log("🔴 Logout clicked in ShopHeader");
+  showDropdown.value = false; // Close dropdown
+  emit("logout"); // Emit to parent component (Shop.vue)
 };
 
 // Close dropdown when clicking outside

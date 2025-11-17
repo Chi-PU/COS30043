@@ -148,21 +148,6 @@
             </p>
           </div>
         </form>
-
-        <div class="or-separator">
-          <span
-            >Or, {{ activeTab === "login" ? "login" : "sign up" }} with</span
-          >
-        </div>
-
-        <button class="google-btn" @click="handleGoogleLogin">
-          <img
-            class="google-logo"
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png"
-            alt="Google Logo"
-          />
-          Google
-        </button>
       </div>
     </div>
   </Teleport>

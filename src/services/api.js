@@ -24,6 +24,7 @@ export const productsAPI = {
   create: (productData) => api.post("/products", productData),
   update: (id, productData) => api.put(`/products/${id}`, productData),
   delete: (id) => api.delete(`/products/${id}`),
+  addRating: (id, rating) => api.post(`/products/${id}/rate`, { rating }),
 };
 
 // Cart API calls

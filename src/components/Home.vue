@@ -59,42 +59,19 @@
       </div>
     </div>
 
-    <!-- Recommended Section -->
+    <!-- Recommended Section updated -->
     <h4 class="recommended-title">Recommended for you</h4>
-
-    <!-- 2 CARDS -->
-    <div class="cards-row">
-      <div class="card-item">
-        <div class="card shadow-sm h-100">
-          <img
-            src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800"
-            class="card-img-top"
-            alt="Tech"
-          />
-          <div class="card-body">
-            <h5 class="card-title">Modern Development</h5>
-            <p class="card-text">
-              Explore cutting-edge technologies and frameworks shaping the
-              future of development.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card shadow-sm h-100">
-          <img
-            src="https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=800"
-            class="card-img-top"
-            alt="Design"
-          />
-          <div class="card-body">
-            <h5 class="card-title">Creative Design</h5>
-            <p class="card-text">
-              Learn about design principles, user experience, and creating
-              responsive interfaces.
-            </p>
-          </div>
+    <div class="recommended-row">
+      <div
+        class="recommended-card"
+        v-for="(item, idx) in recommendedItems"
+        :key="idx"
+      >
+        <img :src="item.image" alt="item.title" class="recommended-image" />
+        <div class="recommended-content">
+          <div class="recommended-category">{{ item.category }}</div>
+          <div class="recommended-text">{{ item.text }}</div>
+          <div class="recommended-arrow">→</div>
         </div>
       </div>
     </div>
@@ -113,6 +90,36 @@
 <script>
 export default {
   name: "Home",
+  data() {
+    return {
+      recommendedItems: [
+        {
+          image:
+            "https://1.cms.s81c.com/sites/default/files/2023-06/accelerate_resolution.png",
+          category: "Guide",
+          text: "Accelerate resolution, strengthen reliability and optimize performance",
+        },
+        {
+          image:
+            "https://1.cms.s81c.com/sites/default/files/2023-06/add_synthetic_monitoring_to_ci_cd_image.png",
+          category: "News",
+          text: "Add synthetic monitoring to your CI/CD to bring production-grade tests to preprod",
+        },
+        {
+          image:
+            "https://1.cms.s81c.com/sites/default/files/2023-06/explore_smart_business.png",
+          category: "Insight",
+          text: "Explore what makes a smarter business and how to become one",
+        },
+        {
+          image:
+            "https://1.cms.s81c.com/sites/default/files/2023-06/generative_ai_journey.png",
+          category: "Resources",
+          text: "Get started on your generative AI journey with self-guided workshops and more",
+        },
+      ],
+    };
+  },
 };
 </script>
 
@@ -235,7 +242,112 @@ export default {
   font-size: 1.25rem;
   font-weight: 600;
   margin-top: 3rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Layout similar to design: horizontal row */
+.recommended-row {
+  display: flex;
+  gap: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Each card styled as white panel with subtle border and spacing */
+.recommended-card {
+  background: #fff;
+  flex: 1 1 0;
+  display: flex;
+  padding: 16px 12px;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  border-left: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.recommended-card:first-child {
+  border-left: none;
+}
+
+/* Image container */
+.recommended-image {
+  width: 120px;
+  height: 120px;
+  background: #f8f8f8;
+  object-fit: contain;
+  margin-right: 16px;
+}
+
+/* Content area */
+.recommended-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.recommended-category {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6f6f6f;
+  margin-bottom: 6px;
+}
+
+.recommended-text {
+  font-size: 1rem;
+  color: #222;
+  line-height: 1.3;
+  min-height: 68px; /* roughly 3 lines */
+}
+
+/* Arrow positioned bottom right */
+.recommended-arrow {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: #0f62fe;
+  user-select: none;
+}
+
+/* Hover effect on card */
+.recommended-card:hover {
+  background-color: #e6f0ff;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .recommended-row {
+    flex-direction: column;
+  }
+  .recommended-card {
+    border-left: none !important;
+    border-top: 1px solid #e0e0e0;
+    padding: 12px 18px;
+  }
+  .recommended-card:first-child {
+    border-top: none !important;
+  }
+  .recommended-image {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    margin-bottom: 12px;
+  }
+  .recommended-content {
+    position: static;
+  }
+  .recommended-arrow {
+    position: static;
+    font-size: 1.25rem;
+    margin-top: 6px;
+    align-self: flex-start;
+  }
 }
 
 /* CARDS */
