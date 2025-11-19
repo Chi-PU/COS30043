@@ -7,15 +7,6 @@
       @show-auth="showPopup = true"
       @view-cart="viewCart"
       @logout="handleLogout"
-      @go-home="router.push('/shop')"
-    />
-
-    <!--Auth Popup-->
-    <AuthPopup
-      :isOpen="showPopup"
-      initialTab="login"
-      @close="showPopup = false"
-      @login-success="handleLoginSuccess"
     />
 
     <!-- Hero Section - First Layer (Full Width) -->
@@ -29,7 +20,14 @@
       @retry="fetchProducts"
       @view-product="viewProductDetail"
       @cart-updated="fetchCartCount"
-      @show-auth="showPopup = true"
+    />
+
+    <!--Auth Popup-->
+    <AuthPopup
+      :isOpen="showPopup"
+      initialTab="login"
+      @close="showPopup = false"
+      @login-success="handleLoginSuccess"
     />
 
     <!-- Floating Buttons -->
@@ -69,10 +67,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import ShopHeader from "./ShopHeader.vue";
+import ShopHeader from "./Shop.vue";
 import AuthPopup from "./AuthPopup.vue";
 import Hero from "./Hero.vue";
-import Products from "./Products.vue";
+import Products from "./Products_noscroll.vue";
 import { productsAPI, cartAPI, authAPI } from "../services/api";
 
 const router = useRouter();
@@ -128,12 +126,12 @@ const viewCart = () => {
     showPopup.value = true;
     return;
   }
-  router.push("/shop/cart");
+  alert("View Cart - Coming soon!");
 };
 
 const viewProductDetail = (product) => {
   // Navigate to product detail page
-  router.push(`/shop/product/${product.id}`);
+  router.push(`/product/${product.id}`);
 };
 
 const handleLoginSuccess = (userData) => {
@@ -161,19 +159,6 @@ const handleLogout = async () => {
     console.error("❌ Logout error:", err);
     alert("Error logging out. Please try again.");
   }
-};
-
-const addRating = (productId, rating) => {
-  console.log(`⭐ Adding rating ${rating} to product ID ${productId}`);
-  productsAPI
-    .addRating(productId, rating)
-    .then((response) => {
-      console.log("✅ Rating added successfully:", response.data);
-      // Optionally refresh product data here
-    })
-    .catch((err) => {
-      console.error("❌ Error adding rating:", err);
-    });
 };
 
 // Lifecycle

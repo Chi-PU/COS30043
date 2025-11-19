@@ -302,7 +302,6 @@ import AuthPopup from "./AuthPopup.vue";
 import { productsAPI, cartAPI, authAPI } from "../services/api";
 
 const route = useRoute();
-const router = useRouter();
 
 // State
 const loading = ref(true);
@@ -415,23 +414,6 @@ const handleAddToCart = async () => {
   } finally {
     addingToCart.value = false;
   }
-};
-
-const handleBuyNow = async () => {
-  if (!user.value) {
-    alert("Please login to purchase");
-    showPopup.value = true;
-    return;
-  }
-
-  if (product.value.stock === 0) {
-    alert("This product is out of stock");
-    return;
-  }
-
-  await handleAddToCart();
-  // Navigate to cart or checkout page
-  alert("Proceeding to checkout... (Feature coming soon)");
 };
 
 const viewCart = () => {

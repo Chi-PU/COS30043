@@ -76,66 +76,55 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="error-message">
+      <div v-if="error" class="error-message">
         <p>{{ error }}</p>
         <button @click="$emit('retry')">Try Again</button>
       </div>
 
       <!-- Top Deal Product Section -->
-      <section v-else class="top-deal-section">
+      <section v-if="!loading && !error" class="top-deal-section">
         <div class="top-deal-header">
           <div class="title">
             <span class="icon">👍</span>
             <span class="label">TOP DEALS</span> •
             <span class="sub-label">SUPER SALE</span>
           </div>
-          <span> Total {{ displayedProducts.length }} products</span>
+          <a>Total {{ displayedProducts.length }} products</a>
         </div>
 
-        <!-- Virtual Scroller -->
-        <RecycleScroller
-          v-if="productRows.length > 0"
-          class="scroller"
-          :items="productRows"
-          :item-size="400"
-          key-field="rowIndex"
-          v-slot="{ item }"
-        >
-          <div class="products-row">
-            <div
-              v-for="product in item.products"
-              :key="product.id"
-              class="product-card"
-              @click="$emit('view-product', product)"
-            >
-              <!-- Product Image -->
-              <div class="product-image">
-                <img
-                  :src="product.image_url || 'https://via.placeholder.com/200'"
-                  :alt="product.name"
-                  loading="lazy"
-                />
-                <span v-if="product.discount > 0" class="badge discount">
-                  -{{ product.discount }}%
-                </span>
-              </div>
+        <div class="products-grid">
+          <div
+            v-for="product in displayedProducts"
+            :key="product.id"
+            class="product-card"
+            @click="$emit('view-product', product)"
+          >
+            <!-- Product Image -->
+            <div class="product-image">
+              <img
+                :src="product.image_url || 'https://via.placeholder.com/200'"
+                :alt="product.name"
+              />
+              <span v-if="product.discount > 0" class="badge discount"
+                >-{{ product.discount }}%</span
+              >
+            </div>
 
-              <!-- Product Title -->
-              <h3 class="product-title" :title="product.name">
-                {{ product.name }}
-              </h3>
+            <!-- Product Title -->
+            <h3 class="product-title" :title="product.name">
+              {{ product.name }}
+            </h3>
 
-              <!-- Star Rating -->
-              <div class="rating-container">
-                <div
-                  class="star-rating"
-                  :title="`${getAverageRating(product).toFixed(
-                    1
-                  )} out of 5 stars`"
-                >
+            <!-- Star Rating -->
+            <div class="rating-container">
+              <div
+                class="star-rating"
+                :title="`${getAverageRating(product).toFixed(
+                  1
+                )} out of 5 stars`"
+              >
+                <template v-for="n in 5" :key="n">
                   <svg
-                    v-for="n in 5"
-                    :key="n"
                     class="star-icon"
                     xmlns="http://www.w3.org/2000/svg"
                     :fill="
@@ -151,49 +140,42 @@
                       d="M12 .587l3.668 7.431L24 9.751l-6 5.843 1.416 8.274L12 18.897l-7.416 3.971L6 15.594 0 9.751l8.332-1.733z"
                     />
                   </svg>
-                </div>
-                <span class="rating-text">
-                  {{ getAverageRating(product).toFixed(1) }}
-                  <span class="rating-count"
-                    >({{ product.number_of_ratings }})</span
-                  >
-                </span>
+                </template>
               </div>
-
-              <!-- Price -->
-              <div class="price-section">
-                <span class="current-price">
-                  ${{ formatPrice(getDiscountedPrice(product)) }}
-                </span>
-                <span v-if="product.discount > 0" class="old-price">
-                  ${{ formatPrice(product.price) }}
-                </span>
-              </div>
-
-              <!-- Stock Info -->
-              <div class="delivery-info">
-                <span v-if="product.stock > 0"
-                  >{{ product.stock }} in stock</span
+              <span class="rating-text">
+                {{ getAverageRating(product).toFixed(1) }}
+                <span class="rating-count"
+                  >({{ product.number_of_ratings }})</span
                 >
-                <span v-else class="out-of-stock">Out of Stock</span>
-              </div>
-
-              <!-- Add to Cart Button -->
-              <button
-                v-if="product.stock > 0"
-                @click.stop="addToCart(product)"
-                class="btn-add-cart"
-                :disabled="addingToCart[product.id]"
-              >
-                {{ addingToCart[product.id] ? "Adding..." : "Add to Cart" }}
-              </button>
+              </span>
             </div>
-          </div>
-        </RecycleScroller>
 
-        <!-- Empty State -->
-        <div v-else class="empty-state">
-          <p>No products found in this category</p>
+            <!-- Price -->
+            <div class="price-section">
+              <span class="current-price"
+                >${{ formatPrice(getDiscountedPrice(product)) }}</span
+              >
+              <div v-if="product.discount > 0" class="discount-section">
+                <span class="old-price">${{ formatPrice(product.price) }}</span>
+              </div>
+            </div>
+
+            <!-- Stock Info -->
+            <div class="delivery-info">
+              <span v-if="product.stock > 0">{{ product.stock }} in stock</span>
+              <span v-else class="out-of-stock">Out of Stock</span>
+            </div>
+
+            <!-- Add to Cart Button -->
+            <button
+              v-if="product.stock > 0"
+              @click.stop="addToCart(product)"
+              class="btn-add-cart"
+              :disabled="addingToCart[product.id]"
+            >
+              {{ addingToCart[product.id] ? "Adding..." : "Add to Cart" }}
+            </button>
+          </div>
         </div>
       </section>
     </main>
@@ -202,8 +184,6 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { RecycleScroller } from "vue-virtual-scroller";
-import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
 
 // Props
 const props = defineProps({
@@ -228,7 +208,7 @@ const emit = defineEmits(["view-product", "retry", "cart-updated"]);
 const selectedCategory = ref("all");
 const addingToCart = ref({});
 
-// Computed Properties
+// Computed
 const displayedProducts = computed(() => {
   if (selectedCategory.value === "all") {
     return props.products;
@@ -255,22 +235,6 @@ const displayedProducts = computed(() => {
   });
 });
 
-// Create rows of products for virtual scrolling (5 per row)
-const productRows = computed(() => {
-  const rows = [];
-  const productsPerRow = 5;
-  const products = displayedProducts.value;
-
-  for (let i = 0; i < products.length; i += productsPerRow) {
-    rows.push({
-      rowIndex: i,
-      products: products.slice(i, i + productsPerRow),
-    });
-  }
-
-  return rows;
-});
-
 // Functions
 const formatPrice = (price) => {
   return parseFloat(price).toFixed(2);
@@ -284,7 +248,7 @@ const getDiscountedPrice = (product) => {
 };
 
 const getAverageRating = (product) => {
-  if (!product.number_of_ratings || product.number_of_ratings === 0) return 0;
+  if (product.number_of_ratings === 0) return 0;
   return product.total_rating_score / product.number_of_ratings;
 };
 
@@ -293,6 +257,7 @@ const filterByCategory = (category) => {
 };
 
 const addToCart = async (product) => {
+  // Set loading state for this product
   addingToCart.value[product.id] = true;
 
   try {
@@ -301,7 +266,7 @@ const addToCart = async (product) => {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
+      credentials: "include", // Important for sending session cookies
       body: JSON.stringify({
         product_id: product.id,
         quantity: 1,
@@ -312,127 +277,52 @@ const addToCart = async (product) => {
       const errorData = await response.json();
       if (response.status === 401) {
         alert("Please login to add items to cart");
-        emit("show-auth");
       } else {
         throw new Error(errorData.error || "Failed to add to cart");
       }
     } else {
+      const data = await response.json();
       alert("Added to cart successfully!");
+      // Emit event to parent to refresh cart
       emit("cart-updated");
     }
   } catch (error) {
     console.error("Add to cart error:", error);
     alert("Failed to add to cart. Please try again.");
   } finally {
+    // Remove loading state
     addingToCart.value[product.id] = false;
   }
 };
 </script>
 
 <style scoped>
-/* Loading and Error States */
 .loading-message,
-.error-message,
-.empty-state {
+.error-message {
   text-align: center;
-  padding: 60px 40px;
+  padding: 40px;
   font-size: 16px;
-  color: #666;
 }
 
 .error-message button {
-  margin-top: 16px;
-  padding: 12px 24px;
+  margin-top: 10px;
+  padding: 10px 20px;
   background: #007dff;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
-  transition: background 0.3s;
 }
 
 .error-message button:hover {
   background: #0066cc;
 }
 
-/* Main Layout */
-.content-wrapper {
-  display: flex;
-  padding: 25px 20px 40px 20px;
-  gap: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-/* Sidebar */
-.sidebar {
-  min-width: 220px;
-  border-radius: 8px;
-  background: #f4f4f6;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  padding: 16px 0;
-  user-select: none;
-  height: fit-content;
-  position: sticky;
-  top: 20px;
-}
-
-.categories ul {
-  list-style-type: none;
-  margin: 0;
-  padding: 0 10px;
-}
-
-.categories li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #3b3b3b;
-  transition: all 0.2s ease;
-}
-
-.categories li:hover {
-  background-color: rgba(0, 125, 255, 0.1);
-}
-
-.categories li.active {
-  background-color: rgba(0, 125, 255, 0.2);
-  font-weight: 700;
-  color: #007dff;
-}
-
-.categories li img {
-  height: 24px;
-  width: 24px;
-  object-fit: contain;
-  user-select: none;
-}
-
-.categories li span {
-  white-space: nowrap;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 0;
-}
-
-/* Top Deal Section */
 .top-deal-section {
   background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 12px 20px 20px 20px;
+  max-width: 100%;
   user-select: none;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -465,55 +355,56 @@ const addToCart = async (product) => {
   font-weight: 500;
 }
 
-/* Virtual Scroller */
-.scroller {
-  height: 70vh;
-  min-height: 600px;
-  overflow-y: auto;
+.view-all {
+  font-size: 14px;
+  color: #1671f0;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+.view-all:hover {
+  text-decoration: underline;
 }
 
-.products-row {
+.products-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   width: 100%;
-  padding: 8px 0;
-  box-sizing: border-box;
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-/* Product Card */
 .product-card {
   background: #fff;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #f0f0f2;
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
   box-sizing: border-box;
   position: relative;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: all 0.3s ease;
-  height: 360px;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .product-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-4px);
-  border-color: #007dff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .product-image {
   width: 100%;
   height: 180px;
-  margin-bottom: 12px;
+  margin: 0 auto 8px auto;
   overflow: hidden;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  background: #fafafa;
-  border-radius: 8px;
 }
 
 .product-image img {
@@ -529,27 +420,28 @@ const addToCart = async (product) => {
   right: 8px;
   font-size: 11px;
   font-weight: 700;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border-radius: 4px;
   background: #ff5722;
   color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
   z-index: 1;
 }
 
 .product-title {
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.3;
   height: 40px;
   overflow: hidden;
   color: #212529;
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
+  cursor: pointer;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-/* Rating */
 .rating-container {
   display: flex;
   align-items: center;
@@ -559,9 +451,8 @@ const addToCart = async (product) => {
 
 .star-rating {
   display: flex;
-  gap: 2px;
+  gap: 1px;
 }
-
 .star-icon {
   pointer-events: none;
   user-select: none;
@@ -578,35 +469,38 @@ const addToCart = async (product) => {
   font-weight: 400;
 }
 
-/* Price */
 .price-section {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #f94545;
+  margin-bottom: 6px;
 }
 
 .current-price {
-  font-weight: 700;
-  font-size: 18px;
-  color: #f94545;
   white-space: nowrap;
+}
+
+.discount-section {
+  display: flex;
+  gap: 6px;
 }
 
 .old-price {
   text-decoration: line-through;
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
 }
 
-/* Delivery Info */
 .delivery-info {
   font-weight: 600;
   font-size: 12px;
   color: #007dff;
   margin-top: auto;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   user-select: none;
 }
 
@@ -615,10 +509,9 @@ const addToCart = async (product) => {
   font-weight: 700;
 }
 
-/* Add to Cart Button */
 .btn-add-cart {
   width: 100%;
-  padding: 11px;
+  padding: 10px;
   background: #007dff;
   color: white;
   border: none;
@@ -636,18 +529,76 @@ const addToCart = async (product) => {
 .btn-add-cart:disabled {
   background: #ccc;
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
-/* Responsive Design */
+.content-wrapper {
+  display: flex;
+  padding: 25px 20px 40px 20px;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+}
+
+.sidebar {
+  min-width: 220px;
+  border-radius: 4px;
+  background: #f4f4f6;
+  box-shadow: 0 1px 4px hsla(0, 0%, 0%, 0.12);
+  padding: 16px 0;
+  user-select: none;
+  height: fit-content;
+}
+
+.categories ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0 10px;
+}
+.categories li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #3b3b3b;
+  transition: background-color 0.25s ease;
+}
+.categories li:hover {
+  background-color: rgba(0, 125, 255, 0.1);
+}
+.categories li.active {
+  background-color: rgba(0, 125, 255, 0.2);
+  font-weight: 700;
+}
+.categories li img {
+  height: 24px;
+  width: 24px;
+  object-fit: contain;
+  user-select: none;
+}
+.categories li span {
+  white-space: nowrap;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 @media (max-width: 1300px) {
-  .products-row {
+  .products-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media (max-width: 1100px) {
-  .products-row {
+  .products-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
@@ -657,36 +608,18 @@ const addToCart = async (product) => {
     flex-direction: column;
     padding: 15px 10px 40px 10px;
   }
-
   .sidebar {
     min-width: 100%;
     margin-bottom: 20px;
-    position: static;
   }
-
-  .products-row {
+  .products-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .scroller {
-    height: 60vh;
-    min-height: 500px;
   }
 }
 
 @media (max-width: 600px) {
-  .products-row {
+  .products-grid {
     grid-template-columns: 1fr;
-  }
-
-  .product-card {
-    height: auto;
-  }
-
-  .top-deal-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
   }
 }
 </style>
