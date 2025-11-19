@@ -1,881 +1,818 @@
 <template>
   <div class="cart-container">
-    <h2>Shopping Cart</h2>
-    <!-- Select All -->
-    <div class="select-all-row">
-      <input
-        type="checkbox"
-        id="selectAll"
-        v-model="selectAll"
-        @change="toggleSelectAll"
-      />
-      <label for="selectAll"
-        >Select All ({{ totalProductCount }} products)</label
-      >
-      <div class="table-headers">
-        <span>Unit Price</span>
-        <span>Quantity</span>
-        <span>Total</span>
-        <span class="icon-delete" title="Delete"></span>
-      </div>
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <p>Loading your cart...</p>
     </div>
 
-    <!-- Shop Sections -->
-    <div class="shop-section" v-for="(shop, sIndex) in shops" :key="shop.id">
-      <div class="shop-header">
-        <input
-          type="checkbox"
-          :id="'shop-' + shop.id"
-          v-model="shop.selected"
-          @change="toggleShopSelection(sIndex)"
-        />
-        <label :for="'shop-' + shop.id"
-          >🏬 {{ shop.name }} <span>›</span></label
-        >
-      </div>
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button @click="fetchCart" class="retry-btn">Try Again</button>
+    </div>
 
-      <!-- Shop Promo -->
-      <div v-if="shop.promoText" class="shop-promo">
-        {{ shop.promoText }}
-        <a href="#" class="choose-products">Choose products</a>
-      </div>
+    <!-- Empty Cart -->
+    <div v-else-if="cartItems.length === 0" class="empty-cart">
+      <p>Your cart is empty</p>
+      <button @click="goToShop" class="shop-btn">Continue Shopping</button>
+    </div>
 
-      <!-- Products -->
-      <div
-        v-for="(product, pIndex) in shop.products"
-        :key="product.id"
-        :class="['product-row', { disabled: product.outOfStock }]"
-      >
-        <input
-          type="checkbox"
-          :id="'product-' + product.id"
-          v-model="product.selected"
-          :disabled="product.outOfStock"
-          @change="updateSelectAllStatus"
-        />
-        <label :for="'product-' + product.id" class="product-info">
-          <img class="product-image" :src="product.image" alt="product" />
-          <div class="product-text">
-            <p class="product-name">{{ product.name }}</p>
-            <p class="delivery-info"><span>🚚</span> Delivery tomorrow</p>
-            <p v-if="product.bookCare" class="bookcare">
-              Can be wrapped with Bookcare
-            </p>
-            <p v-if="product.colorStorage" class="color-storage">
-              {{ product.colorStorage }}
-            </p>
+    <!-- Cart Content -->
+    <template v-else>
+      <!-- Left: Cart Items -->
+      <div class="cart-left">
+        <h2 class="cart-title">SHOPPING CART</h2>
+
+        <!-- Select All -->
+        <div class="select-all">
+          <input
+            type="checkbox"
+            v-model="selectAll"
+            @change="toggleSelectAll"
+          />
+          <span>All ({{ cartItems.length }} products)</span>
+          <span class="headers">
+            <span>Unit Price</span>
+            <span>Quantity</span>
+            <span>Total</span>
+            <span></span>
+          </span>
+        </div>
+
+        <!-- Cart Items -->
+        <div class="shop-block">
+          <div class="shop-header">
+            <input
+              type="checkbox"
+              v-model="shopSelected"
+              @change="updateShopSelection"
+            />
+            <span class="shop-icon">🏪</span>
+            <span class="shop-name">Your Cart</span>
           </div>
-        </label>
-        <div class="unit-price">
-          <template v-if="!product.outOfStock">
-            <span class="price-discounted">{{
-              formatPrice(product.discountPrice)
-            }}</span>
-            <span class="price-original">{{
-              formatPrice(product.originalPrice)
-            }}</span>
-            <span class="discount-percent"
-              >Save {{ product.discountPercent }}%</span
+
+          <!-- Product List -->
+          <div v-for="item in cartItems" :key="item.id" class="item-row">
+            <div class="item-check">
+              <input
+                type="checkbox"
+                v-model="item.selected"
+                @change="updateItemSelection"
+              />
+            </div>
+
+            <img
+              :src="item.product.image_url || 'https://via.placeholder.com/200'"
+              class="item-img"
+              :alt="item.product.name"
+            />
+
+            <div class="item-info">
+              <div class="item-title">{{ item.product.name }}</div>
+              <div class="item-sub">🚚 Delivery tomorrow</div>
+              <div class="item-sub" v-if="item.product.stock > 0">
+                {{ item.product.stock }} in stock
+              </div>
+            </div>
+
+            <div class="price">
+              <div class="current">
+                {{ format(getDiscountedPrice(item.product)) }}
+              </div>
+              <div class="old" v-if="item.product.discount > 0">
+                {{ format(item.product.price) }}
+              </div>
+              <div class="discount" v-if="item.product.discount > 0">
+                ↓ Save {{ item.product.discount }}%
+              </div>
+            </div>
+
+            <div class="qty-box">
+              <button
+                @click="updateQuantity(item, item.quantity - 1)"
+                :disabled="item.quantity <= 1 || updatingItem[item.id]"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                :value="item.quantity"
+                @change="handleQuantityInput(item, $event)"
+                min="1"
+                :max="item.product.stock"
+                :disabled="updatingItem[item.id]"
+              />
+              <button
+                @click="updateQuantity(item, item.quantity + 1)"
+                :disabled="
+                  item.quantity >= item.product.stock || updatingItem[item.id]
+                "
+              >
+                +
+              </button>
+            </div>
+
+            <div class="total">
+              {{ format(getDiscountedPrice(item.product) * item.quantity) }}
+            </div>
+
+            <button
+              class="delete-btn"
+              @click="removeItem(item)"
+              :disabled="removingItem[item.id]"
             >
-          </template>
-          <template v-else>
-            <span class="out-of-stock">Out of stock</span>
-            <span class="no-promo-price"
-              >Price not applicable for promotion</span
-            >
-          </template>
+              🗑
+            </button>
+          </div>
+
+          <!-- Freeship info -->
+          <div class="freeship-info">
+            <span class="truck-icon">🚚</span>
+            Free shipping on orders over $10
+            <span class="info-icon">ⓘ</span>
+          </div>
         </div>
-        <div class="quantity-control" v-if="!product.outOfStock">
+      </div>
+
+      <!-- Right: Summary -->
+      <div class="cart-right">
+        <!-- Delivery Section -->
+        <div class="delivery-box">
+          <div class="delivery-header">
+            <span>Deliver to</span>
+            <a href="#" class="change-link">Change</a>
+          </div>
+          <div class="delivery-info">
+            <strong>{{ user?.name || "Customer" }}</strong>
+          </div>
+          <div>
+            <span>154 WashingTon Street</span>
+          </div>
+          <div class="delivery-note">
+            <span class="note-icon">💡</span>
+            Note: Please ensure your delivery address is correct
+          </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="summary-box">
+          <div class="total-line">
+            <span>Total goods</span>
+            <span>{{ format(totalPrice) }}</span>
+          </div>
+
+          <div class="discount-line">
+            <span>Direct discount</span>
+            <span class="discount-amount">-{{ format(totalDiscount) }}</span>
+          </div>
+
+          <div class="pay-total">
+            <span>Total payment</span>
+            <span class="pay">{{ format(finalTotal) }}</span>
+          </div>
+
+          <div class="vat-note">(VAT included if applicable)</div>
+
           <button
-            @click="decreaseQuantity(sIndex, pIndex)"
-            :disabled="product.quantity <= 1"
+            class="buy-btn"
+            @click="handleCheckout"
+            :disabled="totalSelectedItems === 0"
           >
-            -
+            Buy Now ({{ totalSelectedItems }})
           </button>
-          <input type="number" v-model.number="product.quantity" min="1" />
-          <button @click="increaseQuantity(sIndex, pIndex)">+</button>
-        </div>
-        <div class="total-price" v-if="!product.outOfStock">
-          {{ formatPrice(product.discountPrice * product.quantity) }}
-        </div>
-        <button
-          class="delete-product"
-          @click="removeProduct(sIndex, pIndex)"
-          title="Delete product"
-        >
-          🗑️
-        </button>
-      </div>
-    </div>
-
-    <!-- Add shop promo -->
-    <div class="add-shop-promo">
-      <a href="#">Add shop promo codes</a>
-    </div>
-
-    <!-- Shipping promotion info -->
-    <div class="shipping-promo-info">
-      <span class="icon">🚚</span> Free shipping 10k on orders from 45k, Free
-      shipping 25k on orders from 100k
-      <span class="info-icon">ⓘ</span>
-    </div>
-
-    <!-- Delivery info -->
-    <section class="delivery-info">
-      <div class="delivery-header">
-        <span>Deliver to</span>
-        <button class="change-btn" @click.prevent="changeDelivery">
-          Change
-        </button>
-      </div>
-      <div class="receiver-info">
-        <strong>{{ delivery.name }}</strong> | {{ delivery.phone }}
-        <div class="address">
-          <span class="home-label">Home</span> {{ delivery.address }}
         </div>
       </div>
-      <p class="delivery-note">
-        Note: Use previous delivery address before restocking
-      </p>
-    </section>
-
-    <!-- Promotions -->
-    <section class="promotions">
-      <header>
-        <h3>Tiki Promotions</h3>
-        <small>Can select up to 2</small>
-      </header>
-      <div
-        class="promo-item"
-        v-for="(promo, i) in promos"
-        :key="promo.id"
-        :class="{ selected: promo.selected }"
-      >
-        <div class="promo-icon">{{ promo.icon }}</div>
-        <div class="promo-desc">{{ promo.description }}</div>
-        <button
-          v-if="promo.selected"
-          @click="removePromo(i)"
-          class="btn-remove"
-        >
-          Remove
-        </button>
-        <button v-else @click="selectPromo(i)" class="btn-select">
-          Select
-        </button>
-      </div>
-      <a href="#" class="more-promos"
-        >Shop more to get free shipping 100k on...</a
-      >
-    </section>
-
-    <!-- Price Summary -->
-    <section class="price-summary">
-      <div class="price-row">
-        <span>Subtotal</span>
-        <span>{{ formatPrice(subtotal) }}</span>
-      </div>
-      <div class="price-row discount">
-        <span>Direct discount</span>
-        <span>-{{ formatPrice(discount) }}</span>
-      </div>
-      <div class="price-row total">
-        <strong>Total Payment</strong>
-        <strong class="total-payment">{{ formatPrice(totalPayment) }}</strong>
-      </div>
-      <div class="savings">Save {{ formatPrice(discount) }}</div>
-      <div class="vat-note">(Including VAT if applicable)</div>
-      <button class="checkout-btn" @click="checkout">
-        Purchase ({{ selectedCount }})
-      </button>
-    </section>
+    </template>
   </div>
 </template>
 
-<script>
-export default {
-  name: "ShoppingCart",
-  data() {
-    return {
-      selectAll: true,
-      shops: [
-        {
-          id: 1,
-          name: "Tiki Trading",
-          selected: true,
-          promoText: "Buy 2 more, get 5% off",
-          products: [
-            {
-              id: 101,
-              name: "The Sunwarming Book: Volume 2 of Sweet Orange Tree",
-              image:
-                "https://salt.tikicdn.com/cache/w100/ts/product/78/72/f9/fabd9b2e61db2181673bc4db75bdcd3b.jpg",
-              selected: true,
-              originalPrice: 160000,
-              discountPrice: 108800,
-              discountPercent: 9,
-              quantity: 1,
-              outOfStock: false,
-              bookCare: true,
-              colorStorage: "",
-            },
-            {
-              id: 102,
-              name: "Never Stay Away From Me (Reprint)",
-              image:
-                "https://salt.tikicdn.com/cache/w100/ts/product/6d/07/e9/e978bfe9da1f68adbdb39f11747533e8.jpg",
-              selected: true,
-              originalPrice: 159000,
-              discountPrice: 127200,
-              discountPercent: 1,
-              quantity: 1,
-              outOfStock: false,
-              bookCare: true,
-              colorStorage: "",
-            },
-            {
-              id: 103,
-              name: "Apple iPhone 14 128GB Green",
-              image:
-                "https://salt.tikicdn.com/cache/w100/ts/product/1f/8f/cb/aa799ba0ea3f676f8bb30d04e34d0606.PNG",
-              selected: false,
-              originalPrice: 17990000,
-              discountPrice: 17990000,
-              discountPercent: 0,
-              quantity: 1,
-              outOfStock: true,
-              bookCare: false,
-              colorStorage: "Green, 128GB",
-            },
-          ],
-        },
-        {
-          id: 2,
-          name: "Laptop Minh Ha",
-          selected: false,
-          promoText: "",
-          products: [
-            {
-              id: 201,
-              name: "Example Laptop Product",
-              image: "",
-              selected: false,
-              originalPrice: 6500000,
-              discountPrice: 6500000,
-              discountPercent: 0,
-              quantity: 1,
-              outOfStock: false,
-              bookCare: false,
-              colorStorage: "",
-            },
-          ],
-        },
-      ],
-      promos: [
-        {
-          id: 1,
-          description: "Discount 25K",
-          icon: "🚛",
-          selected: true,
-        },
-      ],
-      delivery: {
-        name: "Dang Chi",
-        phone: "0848257045",
-        address:
-          "54/19 Street 10, Cat Lai Ward, Thu Duc City, Ho Chi Minh City",
-      },
-      discount: 83000,
-    };
-  },
-  computed: {
-    totalProductCount() {
-      return this.shops.reduce(
-        (total, shop) =>
-          total + shop.products.filter((product) => !product.outOfStock).length,
-        0
-      );
-    },
-    subtotal() {
-      return this.shops.reduce((total, shop) => {
-        return (
-          total +
-          shop.products.reduce((sum, product) => {
-            return product.selected && !product.outOfStock
-              ? sum + product.discountPrice * product.quantity
-              : sum;
-          }, 0)
-        );
-      }, 0);
-    },
-    totalPayment() {
-      return this.subtotal - this.discount;
-    },
-    selectedCount() {
-      let count = 0;
-      this.shops.forEach((shop) => {
-        count += shop.products.filter(
-          (product) => product.selected && !product.outOfStock
-        ).length;
-      });
-      return count;
-    },
-  },
-  methods: {
-    formatPrice(value) {
-      return Number(value).toLocaleString("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        minimumFractionDigits: 0,
-      });
-    },
-    toggleSelectAll() {
-      this.shops.forEach((shop) => {
-        shop.selected = this.selectAll;
-        shop.products.forEach((product) => {
-          if (!product.outOfStock) product.selected = this.selectAll;
-        });
-      });
-    },
-    toggleShopSelection(shopIndex) {
-      const shop = this.shops[shopIndex];
-      shop.products.forEach((product) => {
-        if (!product.outOfStock) product.selected = shop.selected;
-      });
-      this.updateSelectAllStatus();
-    },
-    updateSelectAllStatus() {
-      this.selectAll = this.shops.every(
-        (shop) =>
-          shop.selected &&
-          shop.products.every(
-            (product) => product.selected || product.outOfStock
-          )
-      );
-    },
-    decreaseQuantity(shopIndex, productIndex) {
-      const product = this.shops[shopIndex].products[productIndex];
-      if (product.quantity > 1) product.quantity--;
-    },
-    increaseQuantity(shopIndex, productIndex) {
-      const product = this.shops[shopIndex].products[productIndex];
-      product.quantity++;
-    },
-    removeProduct(shopIndex, productIndex) {
-      this.shops[shopIndex].products.splice(productIndex, 1);
-      if (!this.shops[shopIndex].products.length) {
-        this.shops.splice(shopIndex, 1);
-      }
-      this.updateSelectAllStatus();
-    },
-    removePromo(index) {
-      this.promos[index].selected = false;
-    },
-    selectPromo(index) {
-      const selectedCount = this.promos.filter((p) => p.selected).length;
-      if (selectedCount >= 2) return;
-      this.promos[index].selected = true;
-    },
-    changeDelivery() {
-      alert("Change delivery info clicked");
-    },
-    checkout() {
-      alert("Checkout clicked with " + this.selectedCount + " products");
-    },
-  },
-  mounted() {
-    this.updateSelectAllStatus();
-  },
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { cartAPI, authAPI } from "../services/api";
+
+const router = useRouter();
+
+// State
+const loading = ref(true);
+const error = ref(null);
+const cartItems = ref([]);
+const user = ref(null);
+const selectAll = ref(true);
+const shopSelected = ref(true);
+const updatingItem = ref({});
+const removingItem = ref({});
+
+// Computed
+const totalSelectedItems = computed(() => {
+  return cartItems.value
+    .filter((item) => item.selected)
+    .reduce((sum, item) => sum + item.quantity, 0);
+});
+
+const totalPrice = computed(() => {
+  return cartItems.value
+    .filter((item) => item.selected)
+    .reduce((sum, item) => {
+      const price = getDiscountedPrice(item.product);
+      return sum + price * item.quantity;
+    }, 0);
+});
+
+const totalDiscount = computed(() => {
+  return cartItems.value
+    .filter((item) => item.selected && item.product.discount > 0)
+    .reduce((sum, item) => {
+      const discount = item.product.price - getDiscountedPrice(item.product);
+      return sum + discount * item.quantity;
+    }, 0);
+});
+
+const finalTotal = computed(() => totalPrice.value);
+
+// Functions
+const format = (value) => {
+  return "$" + value.toFixed(2);
 };
+
+const getDiscountedPrice = (product) => {
+  if (product.discount > 0) {
+    return product.price * (1 - product.discount / 100);
+  }
+  return product.price;
+};
+
+const fetchCart = async () => {
+  try {
+    loading.value = true;
+    error.value = null;
+
+    const response = await cartAPI.getCart();
+    cartItems.value = response.data.cart.map((item) => ({
+      ...item,
+      selected: true,
+    }));
+
+    console.log("✅ Cart items loaded:", cartItems.value);
+  } catch (err) {
+    console.error("Error fetching cart:", err);
+    error.value = "Unable to load cart. Please try again.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchUser = async () => {
+  try {
+    const response = await authAPI.getMe();
+    user.value = response.data.user;
+  } catch (err) {
+    console.log("User not logged in");
+  }
+};
+
+const toggleSelectAll = () => {
+  cartItems.value.forEach((item) => {
+    item.selected = selectAll.value;
+  });
+  shopSelected.value = selectAll.value;
+};
+
+const updateShopSelection = () => {
+  cartItems.value.forEach((item) => {
+    item.selected = shopSelected.value;
+  });
+  updateSelectAll();
+};
+
+const updateItemSelection = () => {
+  updateSelectAll();
+};
+
+const updateSelectAll = () => {
+  const allSelected = cartItems.value.every((item) => item.selected);
+  selectAll.value = allSelected;
+  shopSelected.value = allSelected;
+};
+
+const updateQuantity = async (item, newQuantity) => {
+  if (newQuantity < 1 || newQuantity > item.product.stock) {
+    return;
+  }
+
+  try {
+    updatingItem.value[item.id] = true;
+
+    await cartAPI.updateCart(item.id, {
+      quantity: newQuantity,
+    });
+
+    item.quantity = newQuantity;
+    console.log("✅ Quantity updated:", item.product.name, "->", newQuantity);
+  } catch (err) {
+    console.error("Error updating quantity:", err);
+    alert("Unable to update quantity. Please try again.");
+  } finally {
+    updatingItem.value[item.id] = false;
+  }
+};
+
+const handleQuantityInput = (item, event) => {
+  const value = parseInt(event.target.value);
+  if (!isNaN(value) && value > 0 && value <= item.product.stock) {
+    updateQuantity(item, value);
+  } else {
+    event.target.value = item.quantity;
+  }
+};
+
+const removeItem = async (item) => {
+  if (!confirm(`Remove "${item.product.name}" from cart?`)) {
+    return;
+  }
+
+  try {
+    removingItem.value[item.id] = true;
+
+    await cartAPI.removeFromCart(item.id);
+
+    const index = cartItems.value.findIndex((i) => i.id === item.id);
+    if (index > -1) {
+      cartItems.value.splice(index, 1);
+    }
+
+    console.log("✅ Item removed from cart");
+
+    if (cartItems.value.length === 0) {
+      selectAll.value = false;
+      shopSelected.value = false;
+    }
+  } catch (err) {
+    console.error("Error removing item:", err);
+    alert("Unable to remove item. Please try again.");
+  } finally {
+    removingItem.value[item.id] = false;
+  }
+};
+
+const handleCheckout = () => {
+  const selectedItems = cartItems.value.filter((item) => item.selected);
+
+  if (selectedItems.length === 0) {
+    alert("Please select items to checkout");
+    return;
+  }
+
+  // TODO: Implement checkout
+  alert(
+    `Checking out ${selectedItems.length} items. Total: ${format(
+      finalTotal.value
+    )}`
+  );
+};
+
+const goToShop = () => {
+  router.push("/");
+};
+
+// Lifecycle
+onMounted(() => {
+  console.log("🛒 Cart component mounted");
+  fetchUser();
+  fetchCart();
+});
 </script>
 
 <style scoped>
+* {
+  box-sizing: border-box;
+}
+
 .cart-container {
-  max-width: 960px;
-  margin: 24px auto;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #222;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+
+  background: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  min-height: calc(100vh - 100px);
 }
 
-h2 {
-  font-weight: 700;
-  margin-bottom: 12px;
+/* Loading and Error States */
+.loading-state,
+.error-state,
+.empty-cart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  margin: 40px auto;
+  max-width: 500px;
 }
 
-.select-all-row {
+.loading-state p,
+.error-state p,
+.empty-cart p {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.retry-btn,
+.shop-btn {
+  padding: 12px 32px;
+  background: #007dff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover,
+.shop-btn:hover {
+  background: #0066cc;
+}
+
+/* LEFT */
+.cart-left {
+  flex: 1;
+  max-width: 900px;
+  margin-left: 5%;
+}
+
+.cart-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.select-all {
   display: flex;
   align-items: center;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.select-all-row input[type="checkbox"] {
-  margin-right: 8px;
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-.select-all-row label {
-  cursor: pointer;
-}
-
-.table-headers {
-  flex-grow: 1;
-  display: flex;
-  justify-content: flex-end;
-  gap: 140px;
-  font-size: 13px;
-  color: #787878;
-  font-weight: 600;
-  margin-left: 20px;
-}
-
-.icon-delete {
-  width: 18px;
-  height: 18px;
-}
-
-.shop-section {
-  border: 1px solid #e6e6e6;
-  margin-bottom: 14px;
+  gap: 12px;
+  padding: 16px;
+  background: white;
   border-radius: 8px;
-  padding: 8px 12px;
-  background: #fff;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.select-all .headers {
+  display: flex;
+  margin-left: auto;
+  gap: 100px;
+  color: #999;
+  font-size: 13px;
+}
+
+.shop-block {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
 }
 
 .shop-header {
   display: flex;
   align-items: center;
-  font-size: 15px;
-  color: #222;
-  font-weight: 600;
-  margin-bottom: 6px;
-  user-select: none;
-}
-
-.shop-header input[type="checkbox"] {
-  margin-right: 10px;
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-.shop-header span {
-  margin-left: 6px;
-  font-weight: 400;
-  color: #999;
-  cursor: pointer;
-}
-
-.shop-promo {
-  background-color: #ffebd9;
-  padding: 8px 12px;
-  font-weight: 600;
-  font-size: 13px;
-  color: #4e4e4e;
-  border-radius: 6px 6px 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.choose-products {
-  font-weight: 600;
-  color: #0066c0;
-  text-decoration: none;
-}
-
-.choose-products:hover {
-  text-decoration: underline;
-}
-
-.product-row {
-  display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr 0.4fr;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid #e6e6e6;
+  gap: 10px;
   padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.product-row.disabled {
-  opacity: 0.35;
-  pointer-events: none;
+.shop-icon {
+  font-size: 18px;
 }
 
-.product-row input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
+.shop-name {
+  font-weight: 600;
+  font-size: 15px;
 }
 
-.product-info {
-  display: flex;
-  gap: 12px;
-  cursor: pointer;
+.item-row {
+  display: grid;
+  grid-template-columns: 40px 90px 2fr 140px 140px 120px 40px;
   align-items: center;
-  user-select: none;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.product-image {
-  width: 60px;
-  height: 80px;
-  object-fit: contain;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
+.item-row:last-child {
+  border-bottom: none;
 }
 
-.product-text {
+.item-img {
+  width: 80px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.item-info {
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  color: #222;
-}
-
-.product-name {
-  font-weight: 600;
-  margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.delivery-info {
-  color: #555;
-  display: flex;
   gap: 6px;
+}
+
+.item-title {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-sub {
+  font-size: 12px;
+  color: #808089;
+  display: flex;
   align-items: center;
+  gap: 4px;
 }
 
-.bookcare,
-.color-storage {
-  font-size: 11px;
-  color: #888;
-  font-style: italic;
-  margin-top: 2px;
-}
-
-.unit-price {
-  font-size: 13px;
-  text-align: right;
+.price {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.price-discounted {
-  font-weight: 700;
-  color: #ef4444;
-  font-size: 14px;
-}
-
-.price-original {
-  text-decoration: line-through;
-  color: #999;
-  font-size: 12px;
-}
-
-.discount-percent {
-  color: #16a34a;
+.price .current {
+  color: #ff424e;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 16px;
 }
 
-.out-of-stock {
-  color: #fb923c;
-  font-weight: 600;
+.price .old {
   font-size: 13px;
+  text-decoration: line-through;
+  color: #808089;
 }
 
-.no-promo-price {
+.price .discount {
   font-size: 12px;
-  color: #bbb;
+  color: #00ab56;
 }
 
-.quantity-control {
+.qty-box {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 2px;
+  width: fit-content;
 }
 
-.quantity-control button {
+.qty-box button {
   width: 28px;
   height: 28px;
-  font-weight: 700;
-  font-size: 18px;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  border-radius: 6px;
   background: white;
-  user-select: none;
-}
-
-.quantity-control button:disabled {
-  color: #ccc;
-  border-color: #eee;
-  cursor: default;
-}
-
-.quantity-control input {
-  width: 48px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.total-price {
-  font-weight: 700;
-  color: #ef4444;
-  font-size: 14px;
-  text-align: right;
-}
-
-.delete-product {
-  background: none;
   border: none;
-  font-size: 18px;
+  border-radius: 4px;
   cursor: pointer;
-  color: #a00;
-  user-select: none;
-}
-
-.delete-product:hover {
-  color: #ef4444;
-}
-
-.add-shop-promo {
-  margin: 10px 0;
-}
-
-.add-shop-promo a {
-  color: #0066c0;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.add-shop-promo a:hover {
-  text-decoration: underline;
-}
-
-.shipping-promo-info {
+  font-size: 16px;
+  color: #333;
   display: flex;
   align-items: center;
-  font-size: 13px;
-  color: #555;
-  gap: 6px;
-  margin-bottom: 14px;
+  justify-content: center;
 }
 
-.shipping-promo-info .icon {
-  font-size: 18px;
+.qty-box button:hover:not(:disabled) {
+  background: #f5f5f5;
 }
 
-.shipping-promo-info .info-icon {
-  font-size: 14px;
-  background: #ccc;
-  color: #444;
-  width: 18px;
-  height: 18px;
-  line-height: 18px;
+.qty-box button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.qty-box input {
+  width: 40px;
   text-align: center;
-  border-radius: 50%;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.qty-box input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.qty-box input::-webkit-inner-spin-button,
+.qty-box input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.total {
+  font-weight: 600;
+  color: #27272a;
+  font-size: 16px;
+}
+
+.delete-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.delete-btn:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.freeship-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f0f8ff;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #333;
+}
+
+.truck-icon {
+  font-size: 16px;
+}
+
+.info-icon {
+  margin-left: auto;
+  color: #999;
   cursor: pointer;
 }
 
-.delivery-info {
-  border: 1px solid #f0db95;
-  background: #fff3cd;
-  padding: 14px;
+/* RIGHT */
+.cart-right {
+  width: 360px;
+  flex-shrink: 0;
+}
+
+.delivery-box {
+  background: white;
   border-radius: 8px;
-  font-size: 13px;
-  color: #222;
-  margin-bottom: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 16px;
 }
 
 .delivery-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.change-btn {
-  background: none;
-  border: none;
-  color: #0066c0;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.receiver-info strong {
-  font-weight: 700;
-}
-
-.address {
-  margin-top: 3px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #444;
-}
-
-.home-label {
-  background-color: #9be6a8;
-  color: #216e25;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.delivery-note {
-  background-color: #ffeeba;
-  padding: 6px 12px;
-  margin-top: 10px;
-  border-radius: 4px;
-  color: #856404;
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.promotions {
   margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.promotions header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 700;
-}
-
-.promotions small {
-  font-weight: 400;
-  font-size: 12px;
-  color: #666;
-}
-
-.promo-item {
-  display: flex;
-  align-items: center;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  padding: 8px 12px;
-  margin-top: 8px;
-  gap: 12px;
-}
-
-.promo-item.selected {
-  border-color: #0066c0;
-  background: #bbd7ff;
-}
-
-.promo-icon {
-  font-size: 28px;
-}
-
-.promo-desc {
-  flex-grow: 1;
-  font-weight: 600;
-}
-
-.btn-remove,
-.btn-select {
-  background: #0066c0;
-  border: none;
-  padding: 6px 14px;
-  color: white;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-remove {
-  background: #ef4444;
-}
-
-.btn-remove:hover {
-  background: #ca2727;
-}
-
-.btn-select:hover {
-  background: #004a99;
-}
-
-.more-promos {
-  display: block;
-  margin-top: 6px;
-  color: #0066c0;
-  font-weight: 600;
-  cursor: pointer;
+.change-link {
+  color: #1a94ff;
   text-decoration: none;
+  font-size: 14px;
 }
 
-.more-promos:hover {
+.change-link:hover {
   text-decoration: underline;
 }
 
-.price-summary {
-  margin-top: 20px;
-  border-top: 1px solid #ddd;
-  padding-top: 20px;
-  font-size: 15px;
-  font-weight: 600;
+.delivery-info {
+  margin: 10px 0;
+  font-size: 14px;
 }
 
-.price-row {
+.delivery-note {
+  background: #fffbea;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #856404;
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.note-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.summary-box {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.total-line,
+.discount-line {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.price-row.discount {
-  color: #099a3e;
-}
-
-.price-row.total {
-  font-size: 24px;
-  font-weight: 900;
-  color: #ef4444;
-}
-
-.savings {
+  margin: 12px 0;
   font-size: 14px;
-  font-weight: 600;
-  color: #099a3e;
-  margin-top: 6px;
+  color: #333;
+}
+
+.discount-amount {
+  color: #00ab56;
+}
+
+.pay-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pay-total span:first-child {
+  font-size: 14px;
+  color: #666;
+}
+
+.pay {
+  color: #ff424e;
+  font-weight: 700;
+  font-size: 24px;
 }
 
 .vat-note {
-  font-size: 12px;
-  color: #666;
-  margin-top: 2px;
+  font-size: 11px;
+  color: #999;
+  text-align: right;
+  margin-bottom: 12px;
 }
 
-.checkout-btn {
-  margin-top: 10px;
-  background-color: #ef4444;
-  color: white;
+.buy-btn {
+  margin-top: 16px;
   width: 100%;
+  padding: 14px;
+  background: #ff424e;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
   border: none;
-  font-weight: 700;
-  font-size: 18px;
-  padding: 12px 0;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  user-select: none;
-  transition: background-color 0.3s ease;
+  transition: background 0.2s;
 }
 
-.checkout-btn:hover {
-  background-color: #c93b3b;
+.buy-btn:hover:not(:disabled) {
+  background: #e63946;
+}
+
+.buy-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #1a94ff;
+}
+
+@media (max-width: 1024px) {
+  .cart-container {
+    flex-direction: column;
+  }
+
+  .cart-right {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .item-row {
+    grid-template-columns: 40px 70px 1fr 100px 100px 80px 40px;
+    gap: 10px;
+  }
+
+  .select-all .headers {
+    gap: 60px;
+    font-size: 12px;
+  }
 }
 </style>

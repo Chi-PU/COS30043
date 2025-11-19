@@ -4,6 +4,7 @@ import News from "../components/News.vue";
 import About from "../components/About.vue";
 import Shop from "../components/Shop.vue";
 import Item from "../components/Item.vue";
+import Cart from "../components/Cart.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -19,6 +20,12 @@ const routes = [
     },
   },
   {
+    path: "/cart",
+    name: "Cart",
+    component: Cart,
+    meta: { title: "Your Shopping Cart" },
+  },
+  {
     path: "/product/:id",
     name: "ProductDetail",
     component: Item,
@@ -27,7 +34,8 @@ const routes = [
       title: "Product Details",
     },
   },
-  // 404 Not Found - catch all route
+
+  // ✅ 404 Not Found - MUST be the LAST route (catch all)
   {
     path: "/:pathMatch(.*)*",
     name: "NotFound",

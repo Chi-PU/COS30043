@@ -26,37 +26,6 @@
           class="hero-image"
         />
       </div>
-
-      <!-- RIGHT SIDEBAR -->
-      <div class="hero-right">
-        <h4 class="sidebar-title">Latest News</h4>
-
-        <div class="sidebar-item">
-          <a href="#" class="sidebar-link">
-            Modern Development Trends in 2025
-          </a>
-          <div class="arrow">→</div>
-        </div>
-
-        <div class="sidebar-item">
-          <a href="#" class="sidebar-link">
-            UI/UX Evolutions and New Patterns
-          </a>
-          <div class="arrow">→</div>
-        </div>
-
-        <div class="sidebar-item">
-          <a href="#" class="sidebar-link"> Understanding AI & Automation </a>
-          <div class="arrow">→</div>
-        </div>
-
-        <div class="sidebar-pagination">
-          <span class="active">1</span>
-          <span>2</span>
-          <span>3</span>
-          <span>4</span>
-        </div>
-      </div>
     </div>
 
     <!-- Recommended Section updated -->
@@ -134,8 +103,6 @@ export default {
 }
 
 .hero-section {
-  display: grid;
-  grid-template-columns: 1.2fr 1.5fr 0.8fr;
   gap: 2.5rem;
   align-items: center;
 }
@@ -161,6 +128,7 @@ export default {
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .primary-btn {

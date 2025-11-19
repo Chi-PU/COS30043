@@ -46,12 +46,7 @@
         </div>
       </div>
 
-      <a
-        href="#"
-        class="header-link cart-link"
-        title="Cart"
-        @click.prevent="$emit('view-cart')"
-      >
+      <a href="#" class="header-link cart-link" title="Cart" @click="goCart">
         <ShoppingCart :size="18" />
         <span class="cart-badge" v-if="cartCount > 0">{{ cartCount }}</span>
       </a>
@@ -82,7 +77,7 @@ const goHomepage = () => {
   router.push({ name: "Shop" });
 };
 // Emits
-const emit = defineEmits(["show-auth", "view-cart", "logout"]);
+const emit = defineEmits(["show-auth", "logout"]);
 
 // State
 const showDropdown = ref(false);
@@ -94,6 +89,10 @@ const toggleDropdown = () => {
   } else {
     emit("show-auth");
   }
+};
+
+const goCart = () => {
+  router.push({ name: "Cart" });
 };
 
 const handleLogout = () => {

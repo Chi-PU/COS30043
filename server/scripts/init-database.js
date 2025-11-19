@@ -1,5 +1,8 @@
 require("dotenv").config();
 const { Pool } = require("pg");
+const fs = require("fs");
+const path = require("path");
+const csv = require("csv-parser");
 
 // Create a new pool with your database credentials from .env
 const pool = new Pool({
@@ -10,13 +13,60 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+// Function to read and parse CSV file
+function readCSV(filePath) {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (data) => results.push(data))
+      .on("end", () => resolve(results))
+      .on("error", (error) => reject(error));
+  });
+}
+
+// Function to extract numeric price from string
+function extractPrice(priceString) {
+  if (!priceString) return 0;
+  const numericValue = parseFloat(priceString);
+  return isNaN(numericValue) ? 0 : numericValue;
+}
+
+// Function to calculate discount percentage
+function calculateDiscount(initialPrice, finalPrice) {
+  if (!initialPrice || !finalPrice || initialPrice <= finalPrice) return 0;
+  return Math.round(((initialPrice - finalPrice) / initialPrice) * 100);
+}
+
+// Function to get first image from image URLs
+function getFirstImage(imageUrls) {
+  if (!imageUrls) return null;
+  try {
+    const urls = JSON.parse(imageUrls);
+    return Array.isArray(urls) && urls.length > 0 ? urls[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+// Function to parse categories from CSV
+function parseCategories(categoriesString) {
+  if (!categoriesString) return [];
+  try {
+    const categories = JSON.parse(categoriesString);
+    return Array.isArray(categories) ? categories : [];
+  } catch {
+    return [];
+  }
+}
+
 async function initDatabase() {
   const client = await pool.connect();
 
   try {
     console.log("Starting database initialization...");
 
-    // Drop existing tables if you want to recreate them with new structure
+    // Drop existing tables if you want to recreate them
     // UNCOMMENT THESE LINES IF YOU WANT TO RESET YOUR DATABASE
     /*
     await client.query('DROP TABLE IF EXISTS order_items CASCADE');
@@ -40,7 +90,7 @@ async function initDatabase() {
     `);
     console.log("✓ Users table created");
 
-    // Create products table with new fields
+    // Create products table
     await client.query(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -49,7 +99,7 @@ async function initDatabase() {
         price DECIMAL(10, 2) NOT NULL,
         discount DECIMAL(5, 2) DEFAULT 0,
         image_url VARCHAR(500),
-        category VARCHAR(100),
+        category TEXT[] DEFAULT '{}',
         stock INTEGER DEFAULT 0,
         total_rating_score INTEGER DEFAULT 0,
         number_of_ratings INTEGER DEFAULT 0,
@@ -58,19 +108,6 @@ async function initDatabase() {
       )
     `);
     console.log("✓ Products table created");
-
-    // If table already exists, add new columns
-    try {
-      await client.query(`
-        ALTER TABLE products 
-        ADD COLUMN IF NOT EXISTS discount DECIMAL(5, 2) DEFAULT 0,
-        ADD COLUMN IF NOT EXISTS total_rating_score INTEGER DEFAULT 0,
-        ADD COLUMN IF NOT EXISTS number_of_ratings INTEGER DEFAULT 0
-      `);
-      console.log("✓ New columns added to products table");
-    } catch (err) {
-      console.log("⚠ Columns may already exist, continuing...");
-    }
 
     // Create cart table
     await client.query(`
@@ -125,25 +162,52 @@ async function initDatabase() {
     `);
     console.log("✓ News table created");
 
-    // Insert sample products with English text and new fields
-    await client.query(`
-      INSERT INTO products (name, description, price, discount, category, stock, image_url, total_rating_score, number_of_ratings) 
-      VALUES 
-        ('MacBook Pro 15"', 'High-performance laptop with 16GB RAM and M2 chip', 1299.99, 15.00, 'Electronics', 10, 'https://salt.tikicdn.com/cache/280x280/ts/product/7a/5b/dc/ecb1af2e1c263b9e6ba2a0f4fc9b44ed.jpg', 245, 50),
-        ('Wireless Mouse', 'Ergonomic wireless mouse with precision tracking', 29.99, 20.00, 'Accessories', 50, 'https://salt.tikicdn.com/cache/280x280/ts/product/2d/79/5d/8fb40d8c6ff2f001b3e5e2656bca090e.jpg', 180, 38),
-        ('Mechanical Keyboard RGB', 'RGB mechanical gaming keyboard with Cherry MX switches', 89.99, 25.00, 'Accessories', 30, 'https://salt.tikicdn.com/cache/280x280/ts/product/46/41/38/488c5e88e4d48d5d7b8f7c2038d9e1a8.jpg', 420, 85),
-        ('USB-C Hub 7-in-1', 'Premium USB-C multiport adapter with 4K HDMI output', 49.99, 10.00, 'Accessories', 25, 'https://salt.tikicdn.com/cache/280x280/ts/product/93/26/2e/e73f0bbbc3e2d6912f6a9efbb515a218.jpg', 165, 35),
-        ('4K Monitor 27"', '4K UHD IPS display with HDR support', 399.99, 30.00, 'Electronics', 15, 'https://salt.tikicdn.com/cache/280x280/ts/product/c5/36/42/aa49b37de6e1ff3f99323651c7c8a8a0.jpg', 385, 78),
-        ('The Art of War', 'Classic strategy and philosophy book by Sun Tzu', 12.99, 0, 'Books', 100, 'https://salt.tikicdn.com/cache/280x280/ts/product/f9/f9/ee/c549f28adea452310419ee9f3b313857.jpg', 470, 95),
-        ('Atomic Habits', 'Bestselling self-improvement book by James Clear', 16.99, 15.00, 'Books', 75, 'https://salt.tikicdn.com/cache/280x280/ts/product/fb/da/47/d7c3470ea5fa56b62a1dd83b71be65c5.jpg', 490, 98),
-        ('Wireless Earbuds Pro', 'Premium noise-cancelling wireless earbuds', 149.99, 20.00, 'Electronics', 40, 'https://salt.tikicdn.com/cache/280x280/ts/product/88/03/06/84ea3ec7703a9f08410d06aea15ee986.jpg', 360, 72),
-        ('Smart Watch Series 8', 'Advanced fitness tracking smartwatch with GPS', 299.99, 12.00, 'Electronics', 20, 'https://salt.tikicdn.com/cache/280x280/ts/product/1f/69/22/8d7d62affd9afa3a2ee2d492d3812f68.jpg', 410, 82),
-        ('Portable SSD 1TB', 'Ultra-fast portable solid state drive', 119.99, 18.00, 'Electronics', 35, 'https://salt.tikicdn.com/cache/280x280/ts/product/67/4a/3b/7a8182516741899d124922dadca876ee.jpg', 290, 58)
-      ON CONFLICT DO NOTHING
-    `);
-    console.log("✓ Sample products inserted");
+    // Read and insert products from CSV
+    const csvPath = path.join(__dirname, "walmart-products.csv");
+    console.log("📖 Reading CSV file...");
 
-    // Insert sample news in English
+    const csvData = await readCSV(csvPath);
+    console.log(`✓ Found ${csvData.length} products in CSV`);
+
+    // Insert products from CSV (limit to first 20 for performance)
+    const productsToInsert = csvData.slice(0, 500);
+
+    for (const row of productsToInsert) {
+      const finalPrice = extractPrice(row.final_price);
+      const initialPrice = extractPrice(row.initial_price);
+      const discount = calculateDiscount(initialPrice, finalPrice);
+      const imageUrl = getFirstImage(row.image_urls) || row.main_image;
+      const categories = parseCategories(row.categories);
+
+      // Calculate rating data
+      const ratingStars = parseFloat(row.rating) || 0;
+      const reviewCount = parseInt(row.review_count) || 0;
+      const totalRatingScore = Math.round(ratingStars * reviewCount);
+
+      // Set random stock between 10-100
+      const stock = Math.floor(Math.random() * 91) + 10;
+
+      await client.query(
+        `INSERT INTO products (name, description, price, discount, category, stock, image_url, total_rating_score, number_of_ratings) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT DO NOTHING`,
+        [
+          row.product_name || "Unknown Product",
+          row.description || "",
+          finalPrice,
+          discount,
+          categories,
+          stock,
+          imageUrl,
+          totalRatingScore,
+          reviewCount,
+        ]
+      );
+    }
+
+    console.log(`✓ ${productsToInsert.length} products inserted from CSV`);
+
+    // Insert sample news
     await client.query(`
       INSERT INTO news (title, content, author) 
       VALUES 
@@ -157,11 +221,9 @@ async function initDatabase() {
 
     console.log("\n✅ Database initialization completed successfully!");
     console.log("\n📊 Database Summary:");
-    console.log("   - All tables created with updated structure");
-    console.log(
-      "   - Products now include: discount, total_rating_score, number_of_ratings"
-    );
-    console.log("   - Sample data inserted in English");
+    console.log("   - All tables created");
+    console.log("   - Products loaded from CSV file");
+    console.log("   - Sample news data inserted");
     console.log("   - Ready to use with your Vue.js frontend!");
   } catch (error) {
     console.error("❌ Error initializing database:", error);

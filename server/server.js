@@ -332,14 +332,47 @@ app.post("/api/products/:id/rate", isAuthenticated, async (req, res) => {
 app.get("/api/cart", isAuthenticated, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT c.id, c.quantity, p.* 
+      `SELECT 
+        c.id as cart_id,
+        c.quantity,
+        c.created_at as added_at,
+        p.id as product_id,
+        p.name,
+        p.description,
+        p.price,
+        p.discount,
+        p.image_url,
+        p.category,
+        p.stock,
+        p.total_rating_score,
+        p.number_of_ratings
        FROM cart c 
        JOIN products p ON c.product_id = p.id 
-       WHERE c.user_id = $1`,
+       WHERE c.user_id = $1
+       ORDER BY c.created_at DESC`,
       [req.session.userId]
     );
 
-    res.json({ cart: result.rows });
+    // Transform the data to match frontend expectations
+    const cartItems = result.rows.map((row) => ({
+      id: row.cart_id,
+      quantity: row.quantity,
+      added_at: row.added_at,
+      product: {
+        id: row.product_id,
+        name: row.name,
+        description: row.description,
+        price: parseFloat(row.price),
+        discount: parseFloat(row.discount),
+        image_url: row.image_url,
+        category: row.category,
+        stock: row.stock,
+        total_rating_score: row.total_rating_score,
+        number_of_ratings: row.number_of_ratings,
+      },
+    }));
+
+    res.json({ cart: cartItems });
   } catch (error) {
     console.error("Get cart error:", error);
     res.status(500).json({ error: "Server error" });
@@ -352,6 +385,20 @@ app.post("/api/cart", isAuthenticated, async (req, res) => {
     const { product_id, quantity } = req.body;
     const user_id = req.session.userId;
 
+    // Validate product exists and has stock
+    const productCheck = await pool.query(
+      "SELECT id, stock FROM products WHERE id = $1",
+      [product_id]
+    );
+
+    if (productCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (productCheck.rows[0].stock < quantity) {
+      return res.status(400).json({ error: "Insufficient stock" });
+    }
+
     // Check if item already in cart
     const existing = await pool.query(
       "SELECT * FROM cart WHERE user_id = $1 AND product_id = $2",
@@ -360,9 +407,18 @@ app.post("/api/cart", isAuthenticated, async (req, res) => {
 
     if (existing.rows.length > 0) {
       // Update quantity
+      const newQuantity = existing.rows[0].quantity + quantity;
+
+      // Check if new quantity exceeds stock
+      if (newQuantity > productCheck.rows[0].stock) {
+        return res.status(400).json({
+          error: `Only ${productCheck.rows[0].stock} items available in stock`,
+        });
+      }
+
       const result = await pool.query(
-        "UPDATE cart SET quantity = quantity + $1 WHERE user_id = $2 AND product_id = $3 RETURNING *",
-        [quantity, user_id, product_id]
+        "UPDATE cart SET quantity = $1 WHERE user_id = $2 AND product_id = $3 RETURNING *",
+        [newQuantity, user_id, product_id]
       );
       res.json({ message: "Cart updated", item: result.rows[0] });
     } else {
@@ -379,19 +435,83 @@ app.post("/api/cart", isAuthenticated, async (req, res) => {
   }
 });
 
+// Update cart item quantity
+app.put("/api/cart/:id", isAuthenticated, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ error: "Quantity must be at least 1" });
+    }
+
+    // Get cart item with product info
+    const cartItem = await pool.query(
+      `SELECT c.*, p.stock 
+       FROM cart c 
+       JOIN products p ON c.product_id = p.id 
+       WHERE c.id = $1 AND c.user_id = $2`,
+      [id, req.session.userId]
+    );
+
+    if (cartItem.rows.length === 0) {
+      return res.status(404).json({ error: "Cart item not found" });
+    }
+
+    // Check stock availability
+    if (quantity > cartItem.rows[0].stock) {
+      return res.status(400).json({
+        error: `Only ${cartItem.rows[0].stock} items available in stock`,
+      });
+    }
+
+    // Update quantity
+    const result = await pool.query(
+      "UPDATE cart SET quantity = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+      [quantity, id, req.session.userId]
+    );
+
+    res.json({
+      message: "Cart updated successfully",
+      item: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Update cart error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Remove from cart
 app.delete("/api/cart/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
 
-    await pool.query("DELETE FROM cart WHERE id = $1 AND user_id = $2", [
-      id,
-      req.session.userId,
-    ]);
+    const result = await pool.query(
+      "DELETE FROM cart WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, req.session.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Cart item not found" });
+    }
 
     res.json({ message: "Item removed from cart" });
   } catch (error) {
     console.error("Remove from cart error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Clear entire cart
+app.delete("/api/cart", isAuthenticated, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM cart WHERE user_id = $1", [
+      req.session.userId,
+    ]);
+
+    res.json({ message: "Cart cleared successfully" });
+  } catch (error) {
+    console.error("Clear cart error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });

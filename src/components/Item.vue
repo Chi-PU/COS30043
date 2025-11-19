@@ -275,13 +275,6 @@
         </div>
 
         <button
-          @click="handleBuyNow"
-          class="buy-now-btn"
-          :disabled="product.stock === 0 || addingToCart"
-        >
-          {{ product.stock === 0 ? "Out of Stock" : "Buy Now" }}
-        </button>
-        <button
           @click="handleAddToCart"
           class="add-to-cart-btn"
           :disabled="product.stock === 0 || addingToCart"

@@ -56,6 +56,16 @@
                 Shop
               </router-link>
             </li>
+            <li class="nav-item">
+              <router-link
+                to="/cart"
+                class="nav-link"
+                @click="showNav = false"
+                active-class="active"
+              >
+                Cart
+              </router-link>
+            </li>
           </ul>
         </div>
       </div>
