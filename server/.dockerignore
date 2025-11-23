@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+README.md
+.vscode
+.DS_Store
+recommendation_service/venv
+recommendation_service/__pycache__
+recommendation_service/*.pyc

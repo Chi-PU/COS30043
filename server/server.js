@@ -93,11 +93,15 @@ app.post("/api/auth/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with is_admin field
     const result = await pool.query(
-      "INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name",
-      [email, hashedPassword, name]
+      "INSERT INTO users (email, password, name, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, email, name, is_admin",
+      [email, hashedPassword, name, false]
     );
+
+    // Set session
+    req.session.userId = result.rows[0].id;
+    req.session.email = result.rows[0].email;
 
     res.status(201).json({
       message: "User created successfully",
@@ -114,21 +118,31 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    console.log("Login attempt for:", email);
+
+    // Find user - IMPORTANT: Include is_admin field
+    const result = await pool.query(
+      "SELECT id, email, name, password, is_admin FROM users WHERE email = $1",
+      [email]
+    );
 
     if (result.rows.length === 0) {
+      console.log("User not found:", email);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = result.rows[0];
+    console.log("User found:", {
+      id: user.id,
+      email: user.email,
+      is_admin: user.is_admin,
+    });
 
     // Verify password
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
+      console.log("Invalid password for:", email);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -136,12 +150,16 @@ app.post("/api/auth/login", async (req, res) => {
     req.session.userId = user.id;
     req.session.email = user.email;
 
+    console.log("Login successful for:", email);
+
+    // Return user data WITHOUT password, but WITH is_admin
     res.json({
       message: "Login successful",
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        is_admin: user.is_admin, // Include is_admin field
       },
     });
   } catch (error) {
@@ -170,11 +188,12 @@ app.post("/api/auth/logout", (req, res) => {
   });
 });
 
-// Check auth status
+// Check auth status - UPDATED to include is_admin
 app.get("/api/auth/me", isAuthenticated, async (req, res) => {
   try {
+    // Include is_admin in the SELECT query
     const result = await pool.query(
-      "SELECT id, email, name FROM users WHERE id = $1",
+      "SELECT id, email, name, is_admin FROM users WHERE id = $1",
       [req.session.userId]
     );
 
@@ -288,42 +307,6 @@ app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
     res.json({ message: "Product deleted" });
   } catch (error) {
     console.error("Delete product error:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// Add rating to product (protected)
-app.post("/api/products/:id/rate", isAuthenticated, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { rating } = req.body;
-
-    // Validate rating (must be 1-5)
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "Rating must be between 1 and 5" });
-    }
-
-    // Update product ratings
-    const result = await pool.query(
-      "UPDATE products SET total_rating_score = total_rating_score + $1, number_of_ratings = number_of_ratings + 1 WHERE id = $2 RETURNING *",
-      [rating, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    const product = result.rows[0];
-    const averageRating =
-      product.total_rating_score / product.number_of_ratings;
-
-    res.json({
-      message: "Rating added successfully",
-      product: product,
-      averageRating: averageRating.toFixed(2),
-    });
-  } catch (error) {
-    console.error("Add rating error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -576,6 +559,224 @@ app.get("/api/orders", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("Get orders error:", error);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Add this to your server.js file, before the recommendations router line
+
+const axios = require("axios");
+
+// Flask recommendation service URL
+const RECOMMENDATION_SERVICE =
+  process.env.RECOMMENDATION_SERVICE_URL || "http://localhost:5001";
+
+// ==================== RECOMMENDATION ENDPOINTS ====================
+
+// Proxy endpoint to get recommendations
+app.get("/api/recommendations/for-you", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const limit = req.query.limit || 10;
+
+    const response = await axios.get(
+      `${RECOMMENDATION_SERVICE}/api/recommendations/${userId}`,
+      {
+        params: { limit },
+        timeout: 10000,
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("[ERROR] Error fetching recommendations:", error.message);
+
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(503).json({
+        error: "Recommendation service unavailable",
+        recommendations: [],
+      });
+    }
+  }
+});
+
+// Manual retrain - triggers retraining immediately
+app.post("/api/recommendations/retrain", isAuthenticated, async (req, res) => {
+  try {
+    console.log(
+      `[RETRAIN] User ${req.session.userId} manually triggered model retraining`
+    );
+
+    const response = await axios.post(
+      `${RECOMMENDATION_SERVICE}/api/retrain`,
+      {},
+      { timeout: 30000 } // 30 second timeout for training
+    );
+
+    res.json({
+      message: "Model retrained successfully",
+      ...response.data,
+    });
+  } catch (error) {
+    console.error("[ERROR] Error retraining model:", error.message);
+
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(503).json({
+        error: "Recommendation service unavailable",
+      });
+    }
+  }
+});
+
+// Check and retrain - checks if user has 10+ ratings, then retrains
+app.post(
+  "/api/recommendations/check-and-retrain",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      console.log(
+        `[CHECK-RETRAIN] Checking if user ${userId} is eligible for retraining`
+      );
+
+      const response = await axios.post(
+        `${RECOMMENDATION_SERVICE}/api/check-and-retrain/${userId}`,
+        {},
+        { timeout: 30000 }
+      );
+
+      res.json(response.data);
+    } catch (error) {
+      console.error("[ERROR] Error in check-and-retrain:", error.message);
+
+      if (error.response) {
+        res.status(error.response.status).json(error.response.data);
+      } else {
+        res.status(503).json({
+          error: "Recommendation service unavailable",
+        });
+      }
+    }
+  }
+);
+
+// Debug endpoint - proxy to Flask debug
+app.get("/api/recommendations/debug", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    console.log(`[DEBUG] Getting debug info for user ${userId}`);
+
+    const response = await axios.get(
+      `${RECOMMENDATION_SERVICE}/api/debug/${userId}`,
+      { timeout: 10000 }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("[ERROR] Error getting debug info:", error.message);
+
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      res.status(503).json({
+        error: "Recommendation service unavailable",
+      });
+    }
+  }
+});
+
+// Rating endpoint - NO automatic retraining
+app.post("/api/products/:id/rate", isAuthenticated, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { id } = req.params;
+    const { rating } = req.body;
+    const user_id = req.session.userId;
+
+    // Validate rating (must be 1-5)
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be between 1 and 5" });
+    }
+
+    await client.query("BEGIN");
+
+    // Check if user already rated this product
+    const existingReview = await client.query(
+      "SELECT * FROM reviews WHERE user_id = $1 AND product_id = $2",
+      [user_id, id]
+    );
+
+    if (existingReview.rows.length > 0) {
+      // Update existing review
+      const oldRating = existingReview.rows[0].rating;
+      const ratingDiff = rating - oldRating;
+
+      await client.query(
+        "UPDATE reviews SET rating = $1, created_at = CURRENT_TIMESTAMP WHERE user_id = $2 AND product_id = $3",
+        [rating, user_id, id]
+      );
+
+      // Update product ratings (adjust by difference)
+      await client.query(
+        "UPDATE products SET total_rating_score = total_rating_score + $1 WHERE id = $2",
+        [ratingDiff, id]
+      );
+    } else {
+      // Insert new review
+      await client.query(
+        "INSERT INTO reviews (user_id, product_id, rating, review_text) VALUES ($1, $2, $3, $4)",
+        [user_id, id, rating, null]
+      );
+
+      // Update product ratings (add new rating)
+      await client.query(
+        "UPDATE products SET total_rating_score = total_rating_score + $1, number_of_ratings = number_of_ratings + 1 WHERE id = $2",
+        [rating, id]
+      );
+    }
+
+    // Get updated product
+    const result = await client.query("SELECT * FROM products WHERE id = $1", [
+      id,
+    ]);
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    await client.query("COMMIT");
+
+    const product = result.rows[0];
+    const averageRating =
+      product.number_of_ratings > 0
+        ? product.total_rating_score / product.number_of_ratings
+        : 0;
+
+    res.json({
+      message:
+        existingReview.rows.length > 0
+          ? "Rating updated successfully"
+          : "Rating added successfully",
+      product: product,
+      averageRating: averageRating.toFixed(2),
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Add rating error:", error);
+
+    if (error.code === "23505") {
+      // Unique constraint violation
+      res.status(400).json({ error: "You have already rated this product" });
+    } else {
+      res.status(500).json({ error: "Server error" });
+    }
+  } finally {
+    client.release();
   }
 });
 

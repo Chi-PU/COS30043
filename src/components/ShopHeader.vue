@@ -1,18 +1,9 @@
 <template>
-  <!-- FreeShip Top Bar -->
-  <div class="freeship-bar">
-    <span>Free shipping on orders over $10, save more with&nbsp;</span>
-    <span class="freeship-xtra">FREESHIP XTRA</span>
-  </div>
-
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <img
-        class="logo"
-        src="https://raw.githubusercontent.com/tikivn/web-logo/master/tiki.svg"
-        alt="Shop logo"
-      />
+      <img class="logo" src="../assets/logo.png" alt="Shop logo" />
+      <span class="shop-name">E Commerce</span>
     </div>
 
     <div class="header-right">
@@ -23,6 +14,17 @@
       >
         <Home :size="18" />
         <span>Home</span>
+      </button>
+
+      <!-- Admin Button (only show if user is admin) -->
+      <button
+        v-if="user && user.is_admin"
+        @click="goAdmin"
+        class="header-link admin-link"
+        title="Admin Dashboard"
+      >
+        <Shield :size="18" />
+        <span>Admin</span>
       </button>
 
       <!-- Account Button with Dropdown -->
@@ -56,7 +58,14 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import { Home, User, ShoppingCart, ChevronDown, LogOut } from "lucide-vue-next";
+import {
+  Home,
+  User,
+  ShoppingCart,
+  ChevronDown,
+  LogOut,
+  Shield,
+} from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
 // Props
@@ -71,11 +80,9 @@ const props = defineProps({
   },
 });
 
-//homepage
+// Router
 const router = useRouter();
-const goHomepage = () => {
-  router.push({ name: "Shop" });
-};
+
 // Emits
 const emit = defineEmits(["show-auth", "logout"]);
 
@@ -83,6 +90,14 @@ const emit = defineEmits(["show-auth", "logout"]);
 const showDropdown = ref(false);
 
 // Functions
+const goHomepage = () => {
+  router.push({ name: "Shop" });
+};
+
+const goAdmin = () => {
+  router.push({ name: "Admin" });
+};
+
 const toggleDropdown = () => {
   if (props.user) {
     showDropdown.value = !showDropdown.value;
@@ -99,6 +114,7 @@ const handleLogout = () => {
   console.log("🔴 Logout clicked in ShopHeader");
   showDropdown.value = false; // Close dropdown
   emit("logout"); // Emit to parent component (Shop.vue)
+  router.go();
 };
 
 // Close dropdown when clicking outside
@@ -119,21 +135,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* FreeShip Top bar */
-.freeship-bar {
-  font-size: 13px;
-  text-align: center;
-  color: #00a650;
-  font-weight: 600;
-  padding: 7px 0;
-  background-color: #f4f9f6;
-}
-.freeship-xtra {
+/* Header */
+.shop-name {
+  font-size: 20px;
   font-weight: 700;
-  color: #00509d;
+  color: #007dff;
 }
 
-/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -200,6 +208,15 @@ onUnmounted(() => {
 
 .home-link:hover {
   color: #0066cc;
+}
+
+/* Admin Link Styling */
+.admin-link {
+  color: #8b5cf6;
+}
+
+.admin-link:hover {
+  color: #7c3aed;
 }
 
 /* Account Dropdown */

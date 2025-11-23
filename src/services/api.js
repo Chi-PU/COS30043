@@ -9,6 +9,14 @@ const api = axios.create({
   },
 });
 
+const aiapi = axios.create({
+  baseURL: "http://localhost:8080/ai",
+  withCredentials: true, // Important for sessions/cookies
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Auth API calls
 export const authAPI = {
   register: (userData) => api.post("/auth/register", userData),
@@ -44,6 +52,22 @@ export const ordersAPI = {
 export const newsAPI = {
   getAll: () => api.get("/news"),
   getById: (id) => api.get(`/news/${id}`),
+};
+
+// Recommendations API calls
+export const recommendationsAPI = {
+  // Get personalized recommendations for the current user
+  getForYou: (limit = 10) =>
+    api.get("/recommendations/for-you", { params: { limit } }),
+
+  // Check if user has 10+ ratings and retrain model if eligible
+  checkAndRetrain: () => api.post("/recommendations/check-and-retrain"),
+
+  // Force manual model retraining
+  manualRetrain: () => api.post("/recommendations/retrain"),
+
+  // Get user rating statistics
+  getUserStats: (userId) => api.get(`/users/${userId}/rating-stats`),
 };
 
 export default api;

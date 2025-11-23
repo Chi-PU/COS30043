@@ -15,7 +15,7 @@ value=0
 while [ $value -le 50 ]
 do
         
-        curl -s -X POST "$BASE_URL/auth/register" -H "Content-Type: application/json" -d '{"name":"TestUser'$value'","email":"user'$value'@test.com","password":"123456"}'
+        curl -s -X POST "$BASE_URL/auth/register" -H "Content-Type: application/json" -d '{"name":"TestUser'$value'","email":"user'$value'@test.com","password":"123456", "is_admin": false}' -c $COOKIE_FILE > /dev/null
         echo "Added testuser: $value"
         value=$((value + 1))
         

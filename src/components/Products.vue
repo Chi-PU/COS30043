@@ -70,6 +70,55 @@
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Search Bar -->
+      <div class="search-section">
+        <div class="search-container">
+          <svg
+            class="search-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="search-input"
+            placeholder="Search products by name..."
+            @input="handleSearch"
+          />
+          <button
+            v-if="searchQuery"
+            @click="clearSearch"
+            class="clear-button"
+            title="Clear search"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <div class="top-deal-header">
         <div class="title">
           <span class="icon">👍</span>
@@ -78,6 +127,7 @@
         </div>
         <span> Total {{ displayedProducts.length }} products</span>
       </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="loading-message">
         <p>Loading products...</p>
@@ -96,7 +146,7 @@
           v-if="productRows.length > 0"
           class="scroller"
           :items="productRows"
-          :item-size="400"
+          :item-size="450"
           key-field="rowIndex"
           v-slot="{ item }"
         >
@@ -192,7 +242,10 @@
 
         <!-- Empty State -->
         <div v-else class="empty-state">
-          <p>No products found in this category</p>
+          <p v-if="searchQuery">
+            No products found matching "{{ searchQuery }}"
+          </p>
+          <p v-else>No products found in this category</p>
         </div>
       </section>
     </main>
@@ -225,33 +278,43 @@ const emit = defineEmits(["view-product", "retry", "cart-updated"]);
 
 // State
 const selectedCategory = ref("all");
+const searchQuery = ref("");
 const addingToCart = ref({});
 
 // Computed Properties
 const displayedProducts = computed(() => {
-  if (selectedCategory.value === "all") {
-    return props.products;
+  let filtered = props.products;
+
+  // Filter by category
+  if (selectedCategory.value !== "all") {
+    filtered = filtered.filter((p) => {
+      if (!p.category) return false;
+
+      // Handle category as array
+      if (Array.isArray(p.category)) {
+        return p.category.some((cat) =>
+          cat.toLowerCase().includes(selectedCategory.value.toLowerCase())
+        );
+      }
+
+      // Handle category as string
+      if (typeof p.category === "string") {
+        return p.category
+          .toLowerCase()
+          .includes(selectedCategory.value.toLowerCase());
+      }
+
+      return false;
+    });
   }
 
-  return props.products.filter((p) => {
-    if (!p.category) return false;
+  // Filter by search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    filtered = filtered.filter((p) => p.name.toLowerCase().includes(query));
+  }
 
-    // Handle category as array
-    if (Array.isArray(p.category)) {
-      return p.category.some((cat) =>
-        cat.toLowerCase().includes(selectedCategory.value.toLowerCase())
-      );
-    }
-
-    // Handle category as string
-    if (typeof p.category === "string") {
-      return p.category
-        .toLowerCase()
-        .includes(selectedCategory.value.toLowerCase());
-    }
-
-    return false;
-  });
+  return filtered;
 });
 
 // Create rows of products for virtual scrolling (5 per row)
@@ -289,6 +352,14 @@ const getAverageRating = (product) => {
 
 const filterByCategory = (category) => {
   selectedCategory.value = category;
+};
+
+const handleSearch = () => {
+  // Search is reactive, no additional action needed
+};
+
+const clearSearch = () => {
+  searchQuery.value = "";
 };
 
 const addToCart = async (product) => {
@@ -426,6 +497,68 @@ const addToCart = async (product) => {
   min-width: 0;
 }
 
+/* Search Section */
+.search-section {
+  background-color: #fff;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 600px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: #888;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 45px 12px 45px;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  border-color: #007dff;
+  box-shadow: 0 0 0 3px rgba(0, 125, 255, 0.1);
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.clear-button {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: color 0.2s;
+  border-radius: 50%;
+}
+
+.clear-button:hover {
+  color: #333;
+  background: #f0f0f0;
+}
+
 /* Top Deal Section */
 .top-deal-section {
   background-color: #fff;
@@ -492,7 +625,7 @@ const addToCart = async (product) => {
   flex-direction: column;
   cursor: pointer;
   transition: all 0.3s ease;
-  height: 360px;
+  height: 420px;
 }
 
 .product-card:hover {
@@ -686,6 +819,10 @@ const addToCart = async (product) => {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .search-container {
+    max-width: 100%;
   }
 }
 </style>

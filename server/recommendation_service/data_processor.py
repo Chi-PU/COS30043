@@ -106,3 +106,35 @@ class DataProcessor:
     
     def close(self):
         self.conn.close()
+
+    def get_user_rating_count(self, user_id):
+        """
+        Get the total number of ratings for a specific user
+        """
+        query = """
+        SELECT COUNT(*) as rating_count
+        FROM reviews
+        WHERE user_id = %s
+        """
+        
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+        
+        return result['rating_count'] if result else 0
+    
+    def get_user_rating_count(self, user_id):
+        """
+        Get the total number of ratings for a specific user
+        """
+        query = """
+        SELECT COUNT(*) as rating_count
+        FROM reviews
+        WHERE user_id = %s
+        """
+        
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+        
+        return result['rating_count'] if result else 0

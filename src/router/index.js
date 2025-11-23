@@ -5,6 +5,7 @@ import About from "../components/About.vue";
 import Shop from "../components/Shop.vue";
 import Item from "../components/Item.vue";
 import Cart from "../components/Cart.vue";
+import Admin from "../components/Admin.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -33,6 +34,12 @@ const routes = [
     meta: {
       title: "Product Details",
     },
+  },
+  {
+    path: "/admin",
+    name: "Admin",
+    component: Admin,
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
 
   // ✅ 404 Not Found - MUST be the LAST route (catch all)

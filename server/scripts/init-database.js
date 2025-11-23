@@ -68,15 +68,14 @@ async function initDatabase() {
 
     // Drop existing tables if you want to recreate them
     // UNCOMMENT THESE LINES IF YOU WANT TO RESET YOUR DATABASE
-    /*
-    await client.query('DROP TABLE IF EXISTS order_items CASCADE');
-    await client.query('DROP TABLE IF EXISTS orders CASCADE');
-    await client.query('DROP TABLE IF EXISTS cart CASCADE');
-    await client.query('DROP TABLE IF EXISTS products CASCADE');
-    await client.query('DROP TABLE IF EXISTS news CASCADE');
-    await client.query('DROP TABLE IF EXISTS users CASCADE');
-    console.log('✓ Existing tables dropped');
-    */
+
+    await client.query("DROP TABLE IF EXISTS order_items CASCADE");
+    await client.query("DROP TABLE IF EXISTS orders CASCADE");
+    await client.query("DROP TABLE IF EXISTS cart CASCADE");
+    await client.query("DROP TABLE IF EXISTS products CASCADE");
+    await client.query("DROP TABLE IF EXISTS reviews CASCADE");
+    await client.query("DROP TABLE IF EXISTS users CASCADE");
+    console.log("✓ Existing tables dropped");
 
     // Create users table
     await client.query(`
@@ -85,6 +84,7 @@ async function initDatabase() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -168,8 +168,8 @@ async function initDatabase() {
     const csvData = await readCSV(csvPath);
     console.log(`✓ Found ${csvData.length} products in CSV`);
 
-    // Insert products from CSV (limit to first 20 for performance)
-    const productsToInsert = csvData.slice(0, 500);
+    // Insert products from CSV
+    const productsToInsert = csvData.slice(0, 1000);
 
     for (const row of productsToInsert) {
       const finalPrice = extractPrice(row.final_price);

@@ -11,11 +11,6 @@
           platform brings you curated content to help you stay updated with the
           ever-evolving world of technology and design.
         </p>
-
-        <div class="hero-buttons">
-          <button class="primary-btn">Explore Modern Development →</button>
-          <button class="outline-btn">Learn About Creative Design →</button>
-        </div>
       </div>
 
       <!-- CENTER IMAGE -->
@@ -36,7 +31,7 @@
         v-for="(item, idx) in recommendedItems"
         :key="idx"
       >
-        <img :src="item.image" alt="item.title" class="recommended-image" />
+        <img :src="item.image" :alt="item.title" class="recommended-image" />
         <div class="recommended-content">
           <div class="recommended-category">{{ item.category }}</div>
           <div class="recommended-text">{{ item.text }}</div>
@@ -64,25 +59,29 @@ export default {
       recommendedItems: [
         {
           image:
-            "https://1.cms.s81c.com/sites/default/files/2023-06/accelerate_resolution.png",
+            "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400",
+          title: "Coding and Development",
           category: "Guide",
           text: "Accelerate resolution, strengthen reliability and optimize performance",
         },
         {
           image:
-            "https://1.cms.s81c.com/sites/default/files/2023-06/add_synthetic_monitoring_to_ci_cd_image.png",
+            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400",
+          title: "Data Analytics Dashboard",
           category: "News",
           text: "Add synthetic monitoring to your CI/CD to bring production-grade tests to preprod",
         },
         {
           image:
-            "https://1.cms.s81c.com/sites/default/files/2023-06/explore_smart_business.png",
+            "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400",
+          title: "Technology Solutions",
           category: "Insight",
           text: "Explore what makes a smarter business and how to become one",
         },
         {
           image:
-            "https://1.cms.s81c.com/sites/default/files/2023-06/generative_ai_journey.png",
+            "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400",
+          title: "AI and Machine Learning",
           category: "Resources",
           text: "Get started on your generative AI journey with self-guided workshops and more",
         },
@@ -114,6 +113,7 @@ export default {
   margin-bottom: 1rem;
   background: linear-gradient(90deg, #3a47d5, #6d5dfc);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
 }
 
@@ -124,82 +124,12 @@ export default {
   max-width: 90%;
 }
 
-.hero-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.primary-btn {
-  background: #0f62fe;
-  color: white;
-  padding: 0.75rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.outline-btn {
-  padding: 0.75rem 1.2rem;
-  border: 2px solid #0f62fe;
-  color: #0f62fe;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 /* CENTER IMAGE */
 .hero-image {
   width: 100%;
   border-radius: 10px;
   object-fit: cover;
   max-height: 420px;
-}
-
-/* RIGHT SIDEBAR */
-.hero-right {
-  border-left: 1px solid #eaeaea;
-  padding-left: 1.5rem;
-}
-
-.sidebar-title {
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-
-.sidebar-item {
-  padding: 1rem 0;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sidebar-link {
-  text-decoration: none;
-  color: #0f62fe;
-  font-weight: 500;
-}
-
-.arrow {
-  color: #0f62fe;
-  font-size: 1.2rem;
-}
-
-.sidebar-pagination {
-  margin-top: 1rem;
-  display: flex;
-  gap: 1rem;
-}
-
-.sidebar-pagination span {
-  cursor: pointer;
-}
-
-.sidebar-pagination .active {
-  color: #0f62fe;
-  font-weight: bold;
 }
 
 /* ------------------------- */
@@ -245,8 +175,9 @@ export default {
   width: 120px;
   height: 120px;
   background: #f8f8f8;
-  object-fit: contain;
+  object-fit: cover;
   margin-right: 16px;
+  border-radius: 4px;
 }
 
 /* Content area */
@@ -318,18 +249,6 @@ export default {
   }
 }
 
-/* CARDS */
-.cards-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-}
-
-.card-img-top {
-  height: 250px;
-  object-fit: cover;
-}
-
 /* ------------------------- */
 /* BOTTOM ALERT */
 /* ------------------------- */
@@ -351,11 +270,6 @@ export default {
 @media (max-width: 992px) {
   .hero-section {
     grid-template-columns: 1fr;
-  }
-
-  .hero-right {
-    border: none;
-    padding: 0;
   }
 
   .hero-image {
