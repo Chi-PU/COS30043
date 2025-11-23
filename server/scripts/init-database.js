@@ -148,20 +148,19 @@ async function initDatabase() {
     `);
     console.log("✓ Order items table created");
 
-    // Create news table
+    // Create reviews table
     await client.query(`
-      CREATE TABLE IF NOT EXISTS news (
+      CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        author VARCHAR(255),
-        image_url VARCHAR(500),
-        published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        rating DECIMAL(2, 1) CHECK (rating >= 1 AND rating <= 5),
+        review_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, product_id)
       )
     `);
-    console.log("✓ News table created");
-
+    console.log("✓ Reviews table created");
     // Read and insert products from CSV
     const csvPath = path.join(__dirname, "walmart-products.csv");
     console.log("📖 Reading CSV file...");
@@ -207,23 +206,11 @@ async function initDatabase() {
 
     console.log(`✓ ${productsToInsert.length} products inserted from CSV`);
 
-    // Insert sample news
-    await client.query(`
-      INSERT INTO news (title, content, author) 
-      VALUES 
-        ('New Product Launch', 'We are excited to announce our new product line launching next month with amazing features!', 'Marketing Team'),
-        ('Summer Sale 2025', 'Get up to 50% off on selected items. Limited time offer - sale ends next week!', 'Sales Department'),
-        ('Website Update', 'Our platform has been updated with new features, improved performance, and better user experience.', 'Tech Team'),
-        ('Customer Appreciation Day', 'Thank you for being our valued customers! Enjoy special discounts throughout the month.', 'Customer Service')
-      ON CONFLICT DO NOTHING
-    `);
-    console.log("✓ Sample news inserted");
-
     console.log("\n✅ Database initialization completed successfully!");
     console.log("\n📊 Database Summary:");
     console.log("   - All tables created");
     console.log("   - Products loaded from CSV file");
-    console.log("   - Sample news data inserted");
+
     console.log("   - Ready to use with your Vue.js frontend!");
   } catch (error) {
     console.error("❌ Error initializing database:", error);

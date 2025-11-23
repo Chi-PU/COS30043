@@ -3,15 +3,21 @@
   "version": "1.0.0",
   "description": "Express backend for ecommerce",
   "main": "server.js",
+
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "init-db": "node scripts/init-database.js"
+    "init-db": "node scripts/init-database.js",
+    "add-reviews": "node scripts/add-reviews-table.js",
+    "start-recommendations": "cd recommendation_service && .\\venv\\Scripts\\python app.py",
+    "start-all": "concurrently \"npm run dev\" \"npm run start-recommendations\""
   },
+
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -22,6 +28,7 @@
     "pg": "^8.11.3"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "nodemon": "^3.0.2"
   }
 }

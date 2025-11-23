@@ -29,40 +29,12 @@
       @retry="fetchProducts"
       @view-product="viewProductDetail"
       @cart-updated="fetchCartCount"
-      @show-auth="showPopup = true"
     />
-
-    <!-- Floating Buttons -->
-    <div class="floating-buttons">
-      <button class="btn-helper">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="#0080FF"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-        >
-          <path
-            d="M12 3a9 9 0 019 9 9 9 0 11-18 0 9 9 0 019-9zm.75 13.5h-1.5v-1.5h1.5v1.5zm0-3h-1.5V7.5h1.5v6z"
-          />
-        </svg>
-        Support
-      </button>
-      <button class="btn-helper">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="#0080FF"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-        >
-          <path
-            d="M12 3.88l9 5.18v7.88L12 20.12 3 16.94V9.06l9-5.18zM12 5.9l-6.7 3.86v5.37l6.7 2.64 6.7-2.64v-5.37L12 5.9z"
-          />
-        </svg>
-        News
-      </button>
-    </div>
+    <ForYou
+      :user="user"
+      @view-product="viewProductDetail"
+      @cart-updated="fetchCartCount"
+    />
   </div>
 </template>
 
@@ -74,6 +46,7 @@ import AuthPopup from "./AuthPopup.vue";
 import Hero from "./Hero.vue";
 import Products from "./Products.vue";
 import { productsAPI, cartAPI, authAPI } from "../services/api";
+import ForYou from "./ForYou.vue";
 
 const router = useRouter();
 
@@ -128,12 +101,12 @@ const viewCart = () => {
     showPopup.value = true;
     return;
   }
-  router.push("/shop/cart");
+  router.push("/cart");
 };
 
 const viewProductDetail = (product) => {
   // Navigate to product detail page
-  router.push(`/shop/product/${product.id}`);
+  router.push(`/product/${product.id}`);
 };
 
 const handleLoginSuccess = (userData) => {
@@ -161,19 +134,6 @@ const handleLogout = async () => {
     console.error("❌ Logout error:", err);
     alert("Error logging out. Please try again.");
   }
-};
-
-const addRating = (productId, rating) => {
-  console.log(`⭐ Adding rating ${rating} to product ID ${productId}`);
-  productsAPI
-    .addRating(productId, rating)
-    .then((response) => {
-      console.log("✅ Rating added successfully:", response.data);
-      // Optionally refresh product data here
-    })
-    .catch((err) => {
-      console.error("❌ Error adding rating:", err);
-    });
 };
 
 // Lifecycle

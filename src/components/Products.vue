@@ -70,6 +70,14 @@
 
     <!-- Main Content -->
     <main class="main-content">
+      <div class="top-deal-header">
+        <div class="title">
+          <span class="icon">👍</span>
+          <span class="label">TOP DEALS</span> •
+          <span class="sub-label">SUPER SALE</span>
+        </div>
+        <span> Total {{ displayedProducts.length }} products</span>
+      </div>
       <!-- Loading State -->
       <div v-if="loading" class="loading-message">
         <p>Loading products...</p>
@@ -83,15 +91,6 @@
 
       <!-- Top Deal Product Section -->
       <section v-else class="top-deal-section">
-        <div class="top-deal-header">
-          <div class="title">
-            <span class="icon">👍</span>
-            <span class="label">TOP DEALS</span> •
-            <span class="sub-label">SUPER SALE</span>
-          </div>
-          <span> Total {{ displayedProducts.length }} products</span>
-        </div>
-
         <!-- Virtual Scroller -->
         <RecycleScroller
           v-if="productRows.length > 0"

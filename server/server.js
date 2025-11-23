@@ -10,6 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const cookieParser = require("cookie-parser");
 
+//npm install bcrypt cookie-parser cors csv-parser dotenv express express-session pg
+
 // PostgreSQL connection pool
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -577,37 +579,9 @@ app.get("/api/orders", isAuthenticated, async (req, res) => {
   }
 });
 
-// ==================== NEWS ROUTES ====================
-
-// Get all news articles
-app.get("/api/news", async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT * FROM news ORDER BY published_at DESC"
-    );
-    res.json({ news: result.rows });
-  } catch (error) {
-    console.error("Get news error:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// Get single news article
-app.get("/api/news/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query("SELECT * FROM news WHERE id = $1", [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "News article not found" });
-    }
-
-    res.json({ article: result.rows[0] });
-  } catch (error) {
-    console.error("Get news error:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+// ==================== RECOMMENDATION ROUTES ====================
+const recommendationsRouter = require("./routes/recommendations");
+app.use("/api/recommendations", recommendationsRouter);
 
 // Start server
 app.listen(PORT, () => {

@@ -1,4 +1,5 @@
 <template>
+  <ShopHeader ref="shopHeader" />
   <div class="cart-container">
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -190,6 +191,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { cartAPI, authAPI } from "../services/api";
+import ShopHeader from "./ShopHeader.vue";
 
 const router = useRouter();
 

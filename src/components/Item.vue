@@ -76,9 +76,6 @@
           <span v-if="product.discount > 0" class="badge-discount"
             >-{{ product.discount }}%</span
           >
-          <span v-if="product.category" class="badge-category">{{
-            product.category
-          }}</span>
         </div>
 
         <h1 class="product-title">{{ product.name }}</h1>
@@ -221,11 +218,7 @@
       <div class="right-column">
         <div class="seller-info">
           <div class="seller-name">
-            <img
-              src="https://frontend.tikicdn.com/_desktop-next/static/img/favicon.ico"
-              alt="Shop logo"
-              class="shop-logo"
-            />
+            <store />
             Official Store
             <span class="official-badge">VERIFIED</span>
           </div>
@@ -300,6 +293,7 @@ import { useRoute, useRouter } from "vue-router";
 import ShopHeader from "./ShopHeader.vue";
 import AuthPopup from "./AuthPopup.vue";
 import { productsAPI, cartAPI, authAPI } from "../services/api";
+import { Store } from "lucide-vue-next";
 
 const route = useRoute();
 
