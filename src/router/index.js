@@ -6,6 +6,7 @@ import Shop from "../components/Shop.vue";
 import Item from "../components/Item.vue";
 import Cart from "../components/Cart.vue";
 import Admin from "../components/Admin.vue";
+import Shop_noscroll from "../components/Shop_noscroll.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -20,6 +21,16 @@ const routes = [
       title: "Shop - Browse Products",
     },
   },
+
+  {
+    path: "/shop_noscroll",
+    name: "ShopNoScroll",
+    component: Shop_noscroll,
+    meta: {
+      title: "Shop - No Scroll",
+    },
+  },
+
   {
     path: "/cart",
     name: "Cart",

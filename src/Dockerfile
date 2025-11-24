@@ -1,4 +1,5 @@
-FROM node:18-alpine as build-stage
+# Build stage
+FROM node:22-alpine as build-stage
 
 # Set working directory
 WORKDIR /app
@@ -12,11 +13,18 @@ RUN npm ci
 # Copy application code
 COPY . .
 
+# Build argument for API URL
+ARG VITE_API_URL=http://localhost:8080
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build application
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
+
+# Install curl for healthchecks
+RUN apk add --no-cache curl
 
 # Copy built assets from build stage
 COPY --from=build-stage /app/dist /usr/share/nginx/html
@@ -29,6 +37,6 @@ EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD curl -f http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

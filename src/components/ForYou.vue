@@ -131,7 +131,7 @@
         </svg>
         <p class="status-title">{{ error }}</p>
         <p class="status-hint">
-          Try retraining the model above to get fresh recommendations
+          Rate 10 or more items to get personalized recommendations.
         </p>
       </div>
 
@@ -184,7 +184,7 @@
                     class="star-icon"
                     xmlns="http://www.w3.org/2000/svg"
                     :fill="
-                      n <= Math.round(getAverageRating(product))
+                      n <= Math.ceil(getAverageRating(product))
                         ? '#FFD500'
                         : '#E0E0E0'
                     "
@@ -200,7 +200,7 @@
                 <span class="rating-text">
                   {{ getAverageRating(product).toFixed(1) }}
                   <span class="rating-count"
-                    >({{ product.number_of_ratings }})</span
+                    >({{ product.number_of_ratings || 0 }})</span
                   >
                 </span>
               </div>

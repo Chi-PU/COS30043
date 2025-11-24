@@ -9,8 +9,8 @@
 BASE_URL="http://localhost:8080/api"
 COOKIE_FILE="cookies.txt"
 USER_EMAIL="chi@test.com"
-USER_PASSWORD="123456"
-USER_NAME="Chi"
+USER_PASSWORD="12345678"
+
 NUM_RATINGS=20 # Number of random ratings to post
 
 # -----------------------------

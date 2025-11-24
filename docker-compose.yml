@@ -4,100 +4,132 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: ecommerce-postgres
+    container_name: ecommerce_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${DB_NAME:-ecommerce}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./server/scripts:/docker-entrypoint-initdb.d
+    networks:
+      - ecommerce_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - ecommerce-network
 
-  # Express Backend
+  # Backend API (Node.js)
   backend:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: ecommerce-backend
+    container_name: ecommerce_backend
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      PORT: ${PORT}
-      SESSION_SECRET: ${SESSION_SECRET}
-      CORS_ORIGIN: ${CORS_ORIGIN}
-      RECOMMENDATION_SERVICE_URL: ${RECOMMENDATION_SERVICE_URL}
-      NODE_ENV: ${NODE_ENV}
+      NODE_ENV: production
+      PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ecommerce}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      SESSION_SECRET: ${SESSION_SECRET:-change-this-secret-in-production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      RECOMMENDATION_SERVICE_URL: http://recommendation:5001
     ports:
       - "8080:8080"
     volumes:
       - ./server:/app
       - /app/node_modules
-      - ./server/scripts:/app/scripts
-    networks:
-      - ecommerce-network
-
-  # Python Recommendation Service
-  recommendation-service:
-    build:
-      context: ./server/recommendation_service
-      dockerfile: Dockerfile
-    container_name: ecommerce-recommendations
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-      backend:
-        condition: service_started
+    networks:
+      - ecommerce_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8080/api/products', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Recommendation Service (Python/Flask)
+  recommendation:
+    build:
+      context: ./server/recommendation_service
+      dockerfile: Dockerfile
+    container_name: ecommerce_recommendation
+    restart: unless-stopped
     environment:
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      RECOMMENDATION_PORT: ${RECOMMENDATION_PORT}
+      FLASK_ENV: production
+      RECOMMENDATION_PORT: 5001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ecommerce}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5001:5001"
     volumes:
       - ./server/recommendation_service:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
-      - ecommerce-network
-    # Wait a bit for database to be fully ready
-    command: >
-      sh -c "sleep 10 && python app.py"
+      - ecommerce_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5001/api/health').read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # Vue Frontend (Optional)
+  # Frontend (Vue.js with Nginx)
   frontend:
     build:
-      context: ./client
+      context: ./src
       dockerfile: Dockerfile
-    container_name: ecommerce-frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: ecommerce_frontend
     restart: unless-stopped
-    depends_on:
-      - backend
     ports:
       - "80:80"
+    depends_on:
+      - backend
+      - recommendation
     networks:
-      - ecommerce-network
+      - ecommerce_network
+    healthcheck:
+      test:
+        ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
 networks:
-  ecommerce-network:
+  ecommerce_network:
     driver: bridge
 
 volumes:

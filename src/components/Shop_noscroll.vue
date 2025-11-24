@@ -11,7 +11,6 @@
 
     <!-- Hero Section - First Layer (Full Width) -->
     <Hero />
-
     <!-- Products Component with data passed as props -->
     <Products
       :products="products"
